@@ -1,15 +1,12 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
-from app.api import proveedores, trabajos
+from app.database import engine
+from app import models
+from app.api import proveedores, trabajos, cotizaciones, auth
 
-Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title="CN Pueblo Viejo 2 · Gestión",
-    version="1.0.0",
-    description="Sistema de gestión del Condominio Complejo Náutico Pueblo Viejo II"
-)
+app = FastAPI(title="CN Pueblo Viejo 2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,7 +18,9 @@ app.add_middleware(
 
 app.include_router(proveedores.router, prefix="/api")
 app.include_router(trabajos.router, prefix="/api")
+app.include_router(cotizaciones.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {"app": "CN Pueblo Viejo 2 · Gestión", "status": "ok"}
+    return {"status": "ok"}
