@@ -1,10 +1,9 @@
 ﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine
-from app import models
-from app.api import proveedores, trabajos, cotizaciones, auth
+from app.database import Base, engine
+from app.api import proveedores, trabajos, auth
 
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CN Pueblo Viejo 2")
 
@@ -16,10 +15,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api")
 app.include_router(proveedores.router, prefix="/api")
 app.include_router(trabajos.router, prefix="/api")
-app.include_router(cotizaciones.router, prefix="/api")
-app.include_router(auth.router, prefix="/api")
 
 @app.get("/")
 def root():

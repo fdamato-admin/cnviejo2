@@ -1,16 +1,15 @@
 ﻿from pydantic import BaseModel
 from typing import Optional, List
+from decimal import Decimal
 from datetime import datetime
-from .models import NivelPermiso
+from .models import TipoProveedor, EstadoProveedor, TipoTrabajo, PrioridadTrabajo, EstadoTrabajo, EstadoCotizacion, NivelPermiso
 
 class PermisoIn(BaseModel):
     modulo: str
     nivel: NivelPermiso
 
-class PermisoOut(BaseModel):
+class PermisoOut(PermisoIn):
     id: int
-    modulo: str
-    nivel: NivelPermiso
     class Config: from_attributes = True
 
 class UsuarioCreate(BaseModel):
@@ -21,11 +20,11 @@ class UsuarioCreate(BaseModel):
     permisos: List[PermisoIn] = []
 
 class UsuarioUpdate(BaseModel):
-    nombre: str
-    email: str
+    nombre: Optional[str] = None
+    email: Optional[str] = None
     password: Optional[str] = None
-    activo: bool = True
-    permisos: List[PermisoIn] = []
+    activo: Optional[bool] = None
+    permisos: Optional[List[PermisoIn]] = None
 
 class UsuarioOut(BaseModel):
     id: int
@@ -35,53 +34,88 @@ class UsuarioOut(BaseModel):
     permisos: List[PermisoOut] = []
     class Config: from_attributes = True
 
+class LoginIn(BaseModel):
+    email: str
+    password: str
+
 class TokenOut(BaseModel):
     access_token: str
-    token_type: str
+    token_type: str = "bearer"
     usuario: UsuarioOut
 
 class ProveedorBase(BaseModel):
     nombre: str
-    rif: Optional[str] = None
+    empresa: Optional[str] = None
+    tipo: TipoProveedor
+    categoria: str
     telefono: Optional[str] = None
+    telefono_alt: Optional[str] = None
     email: Optional[str] = None
+    ubicacion: Optional[str] = None
+    rif: Optional[str] = None
     direccion: Optional[str] = None
-    especialidad: Optional[str] = None
-    activo: bool = True
+    estado: EstadoProveedor = EstadoProveedor.activo
+    referido_por: Optional[str] = None
+    notas: Optional[str] = None
 
 class ProveedorCreate(ProveedorBase): pass
-class ProveedorUpdate(ProveedorBase): pass
+class ProveedorUpdate(ProveedorBase):
+    nombre: Optional[str] = None
+    tipo: Optional[TipoProveedor] = None
+    categoria: Optional[str] = None
+
 class ProveedorOut(ProveedorBase):
     id: int
-    creado_en: Optional[datetime] = None
+    creado_en: datetime
+    actualizado_en: Optional[datetime] = None
     class Config: from_attributes = True
 
 class TrabajoBase(BaseModel):
     titulo: str
     descripcion: Optional[str] = None
-    proveedor_id: Optional[int] = None
-    estado: str = "pendiente"
-    fecha_inicio: Optional[datetime] = None
-    fecha_fin: Optional[datetime] = None
-    monto: Optional[str] = None
+    categoria: str
+    tipo: TipoTrabajo
+    prioridad: PrioridadTrabajo = PrioridadTrabajo.normal
+    ubicacion: Optional[str] = None
+    notas: Optional[str] = None
 
 class TrabajoCreate(TrabajoBase): pass
-class TrabajoUpdate(TrabajoBase): pass
+class TrabajoUpdate(TrabajoBase):
+    titulo: Optional[str] = None
+    categoria: Optional[str] = None
+    tipo: Optional[TipoTrabajo] = None
+    estado: Optional[EstadoTrabajo] = None
+
 class TrabajoOut(TrabajoBase):
     id: int
-    creado_en: Optional[datetime] = None
+    estado: EstadoTrabajo
+    creado_en: datetime
+    actualizado_en: Optional[datetime] = None
     class Config: from_attributes = True
 
 class CotizacionBase(BaseModel):
-    titulo: str
+    trabajo_id: int
     proveedor_id: Optional[int] = None
-    monto: Optional[str] = None
-    estado: str = "pendiente"
+    proveedor_nombre: Optional[str] = None
+    tipo: TipoTrabajo
+    monto: Optional[Decimal] = None
+    moneda: str = "USD"
     descripcion: Optional[str] = None
+    es_manual: bool = True
+    email_enviado_a: Optional[str] = None
+    notas: Optional[str] = None
 
 class CotizacionCreate(CotizacionBase): pass
-class CotizacionUpdate(CotizacionBase): pass
+class CotizacionUpdate(BaseModel):
+    estado: Optional[EstadoCotizacion] = None
+    monto: Optional[Decimal] = None
+    moneda: Optional[str] = None
+    descripcion: Optional[str] = None
+    notas: Optional[str] = None
+
 class CotizacionOut(CotizacionBase):
     id: int
-    creado_en: Optional[datetime] = None
+    estado: EstadoCotizacion
+    creado_en: datetime
+    actualizado_en: Optional[datetime] = None
     class Config: from_attributes = True
