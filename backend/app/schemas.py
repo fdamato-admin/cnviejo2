@@ -86,9 +86,29 @@ class TrabajoUpdate(TrabajoBase):
     tipo: Optional[TipoTrabajo] = None
     estado: Optional[EstadoTrabajo] = None
 
+class TrabajoMediaUpdate(BaseModel):
+    foto1: Optional[str] = None
+    foto2: Optional[str] = None
+    foto3: Optional[str] = None
+    foto4: Optional[str] = None
+    foto5: Optional[str] = None
+    foto6: Optional[str] = None
+    video1: Optional[str] = None
+    video2: Optional[str] = None
+    video3: Optional[str] = None
+
 class TrabajoOut(TrabajoBase):
     id: int
     estado: EstadoTrabajo
+    foto1: Optional[str] = None
+    foto2: Optional[str] = None
+    foto3: Optional[str] = None
+    foto4: Optional[str] = None
+    foto5: Optional[str] = None
+    foto6: Optional[str] = None
+    video1: Optional[str] = None
+    video2: Optional[str] = None
+    video3: Optional[str] = None
     creado_en: datetime
     actualizado_en: Optional[datetime] = None
     class Config: from_attributes = True
