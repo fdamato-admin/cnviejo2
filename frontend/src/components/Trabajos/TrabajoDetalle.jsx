@@ -45,6 +45,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
   const [cotEditar, setCotEditar] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [subiendo, setSubiendo] = useState({});
+  const [subiendoDoc, setSubiendoDoc] = useState({});
   const [vistaPrevia, setVistaPrevia] = useState(null);
   const [pestana, setPestana] = useState('evidencias');
   const inputRefs = useRef({});
@@ -79,6 +80,20 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!window.confirm('Eliminar esta cotizacion?')) return;
     await API.delete(`/trabajos/cotizaciones/${id}`);
     cargar();
+  };
+
+  const handleSubirDocumento = async (cotId, file) => {
+    if (!file) return;
+    setSubiendoDoc(s => ({ ...s, [cotId]: true }));
+    try {
+      const url = await subirCloudinary(file, 'image');
+      await API.put(`/trabajos/cotizaciones/${cotId}`, { documento_url: url });
+      cargar();
+    } catch (e) {
+      alert('Error subiendo documento: ' + e.message);
+    } finally {
+      setSubiendoDoc(s => ({ ...s, [cotId]: false }));
+    }
   };
 
   const handleSubirFoto = async (slot, file) => {
@@ -140,7 +155,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
 
         <div style={{ display: 'flex', borderBottom: '2px solid #e0e0e0', marginBottom: 20 }}>
           {['evidencias', 'cotizaciones'].map(p => (
-            <button key={p} onClick={() => setPestana(p)} style={{ padding: '10px 24px', border: 'none', borderBottom: pestana === p ? '3px solid #2a78d6' : '3px solid transparent', background: 'none', fontWeight: pestana === p ? 700 : 400, color: pestana === p ? '#2a78d6' : '#666', cursor: 'pointer', fontSize: 14, textTransform: 'capitalize' }}>
+            <button key={p} onClick={() => setPestana(p)} style={{ padding: '10px 24px', border: 'none', borderBottom: pestana === p ? '3px solid #2a78d6' : '3px solid transparent', background: 'none', fontWeight: pestana === p ? 700 : 400, color: pestana === p ? '#2a78d6' : '#666', cursor: 'pointer', fontSize: 14 }}>
               {p === 'evidencias' ? 'Evidencias' : 'Cotizaciones'}
             </button>
           ))}
@@ -217,10 +232,15 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
                       </div>
                     </div>
                     {cot.descripcion && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#555' }}>{cot.descripcion}</p>}
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    {cot.documento_url && <a href={cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>Ver documento adjunto</a>}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                       {cot.estado !== 'aprobada' && cot.estado !== 'rechazada' && <button onClick={() => aprobarCotizacion(cot)} style={{ padding: '5px 14px', background: '#198754', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Aprobar</button>}
                       <button onClick={() => { setCotEditar(cot); setMostrarForm(true); }} style={{ padding: '5px 14px', background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Editar</button>
                       <button onClick={() => eliminarCotizacion(cot.id)} style={{ padding: '5px 14px', background: '#fff0f0', color: '#c00', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
+                      <label style={{ padding: '5px 14px', background: '#f0f4ff', color: '#2a4a8a', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
+                        {subiendoDoc[cot.id] ? 'Subiendo...' : 'Adjuntar doc'}
+                        <input type='file' accept='image/*,.pdf' style={{ display: 'none' }} onChange={e => handleSubirDocumento(cot.id, e.target.files[0])} />
+                      </label>
                     </div>
                   </div>
                 );

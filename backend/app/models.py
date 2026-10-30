@@ -118,6 +118,7 @@ class Cotizacion(Base):
     descripcion = Column(Text, nullable=True)
     es_manual = Column(Boolean, default=True)
     email_enviado_a = Column(String(120), nullable=True)
+    documento_url = Column(String(500), nullable=True)
     notas = Column(Text, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())

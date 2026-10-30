@@ -124,6 +124,7 @@ class CotizacionBase(BaseModel):
     es_manual: bool = True
     email_enviado_a: Optional[str] = None
     notas: Optional[str] = None
+    documento_url: Optional[str] = None
 
 class CotizacionCreate(CotizacionBase): pass
 class CotizacionUpdate(BaseModel):
@@ -131,6 +132,7 @@ class CotizacionUpdate(BaseModel):
     monto: Optional[Decimal] = None
     moneda: Optional[str] = None
     descripcion: Optional[str] = None
+    documento_url: Optional[str] = None
     notas: Optional[str] = None
 
 class CotizacionOut(CotizacionBase):
