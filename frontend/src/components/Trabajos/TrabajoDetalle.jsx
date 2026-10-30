@@ -86,8 +86,16 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!file) return;
     setSubiendoDoc(s => ({ ...s, [cotId]: true }));
     try {
-      const url = await subirCloudinary(file, 'image', 'cnpv2_unsigned');
-      await API.put(`/trabajos/cotizaciones/${cotId}`, { documento_url: url });
+      const fd = new FormData();
+      fd.append('file', file);
+      const baseURL = API.defaults.baseURL;
+      const token = localStorage.getItem('token');
+      const res = await fetch(baseURL + '/trabajos/cotizaciones/' + cotId + '/documento', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: fd
+      });
+      if (!res.ok) throw new Error('Error subiendo documento');
       cargar();
     } catch (e) {
       alert('Error subiendo documento: ' + e.message);
