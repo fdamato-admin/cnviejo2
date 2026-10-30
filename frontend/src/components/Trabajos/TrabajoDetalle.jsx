@@ -86,7 +86,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!file) return;
     setSubiendoDoc(s => ({ ...s, [cotId]: true }));
     try {
-      const url = await subirCloudinary(file, /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'raw' : 'image', /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'cnpv2_docs' : 'cnpv2_unsigned');
+      const url = await subirCloudinary(file, /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'raw' : 'image', /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'cnpv2_unsigned' : 'cnpv2_unsigned');
       await API.put(`/trabajos/cotizaciones/${cotId}`, { documento_url: url });
       cargar();
     } catch (e) {
@@ -100,7 +100,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!file) return;
     setSubiendo(s => ({ ...s, [slot]: true }));
     try {
-      const url = await subirCloudinary(file, /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'raw' : 'image', /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'cnpv2_docs' : 'cnpv2_unsigned');
+      const url = await subirCloudinary(file, /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'raw' : 'image', /\.(pdf|doc|docx|xls|xlsx)$/i.test(file.name) ? 'cnpv2_unsigned' : 'cnpv2_unsigned');
       await API.patch(`/trabajos/${trabajo.id}/media`, { [slot]: url });
       recargarTrabajo();
       onCambio && onCambio();
