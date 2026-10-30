@@ -75,3 +75,15 @@ def seed(db: Session = Depends(get_db)):
     db.add(Permiso(usuario_id=user.id, modulo="*", nivel=NivelPermiso.admin))
     db.commit()
     return {"ok": True, "email": "fdamato@cnpv2.com", "password": "123456"}
+
+@router.post("/reset-admin")
+def reset_admin(db: Session = Depends(get_db)):
+    db.query(Permiso).delete()
+    db.query(Usuario).delete()
+    db.commit()
+    user = Usuario(nombre="FDAMATO", email="fdamato@cnpv2.com", password_hash=hash_password("123456"), activo=True)
+    db.add(user)
+    db.flush()
+    db.add(Permiso(usuario_id=user.id, modulo="*", nivel=NivelPermiso.admin))
+    db.commit()
+    return {"ok": True}
