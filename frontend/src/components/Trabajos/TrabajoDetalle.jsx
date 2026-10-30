@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../../api';
 import CotizacionForm from './CotizacionForm';
 
@@ -86,7 +86,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!file) return;
     setSubiendoDoc(s => ({ ...s, [cotId]: true }));
     try {
-      const url = await subirCloudinary(file, 'image');
+      const url = await subirCloudinary(file, (file.type === 'application/pdf' || file.name.endsWith('.doc') || file.name.endsWith('.docx')) ? 'raw' : 'image');
       await API.put(`/trabajos/cotizaciones/${cotId}`, { documento_url: url });
       cargar();
     } catch (e) {
@@ -100,7 +100,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!file) return;
     setSubiendo(s => ({ ...s, [slot]: true }));
     try {
-      const url = await subirCloudinary(file, 'image');
+      const url = await subirCloudinary(file, (file.type === 'application/pdf' || file.name.endsWith('.doc') || file.name.endsWith('.docx')) ? 'raw' : 'image');
       await API.patch(`/trabajos/${trabajo.id}/media`, { [slot]: url });
       recargarTrabajo();
       onCambio && onCambio();
