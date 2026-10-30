@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import API from '../../api';
 import CotizacionForm from './CotizacionForm';
 
@@ -240,14 +240,14 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
                       </div>
                     </div>
                     {cot.descripcion && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#555' }}>{cot.descripcion}</p>}
-                    {cot.documento_url && <a href={'https://cnviejo2-production.up.railway.app' + cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>Ver documento adjunto</a>}
+                    {cot.documento_url && <a href={cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>Ver documento adjunto</a>}
                     <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                       {cot.estado !== 'aprobada' && cot.estado !== 'rechazada' && <button onClick={() => aprobarCotizacion(cot)} style={{ padding: '5px 14px', background: '#198754', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Aprobar</button>}
                       <button onClick={() => { setCotEditar(cot); setMostrarForm(true); }} style={{ padding: '5px 14px', background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Editar</button>
                       <button onClick={() => eliminarCotizacion(cot.id)} style={{ padding: '5px 14px', background: '#fff0f0', color: '#c00', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
                       <label style={{ padding: '5px 14px', background: '#f0f4ff', color: '#2a4a8a', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
                         {subiendoDoc[cot.id] ? 'Subiendo...' : 'Adjuntar doc'}
-                        <input type='file' accept='image/*,.pdf' style={{ display: 'none' }} onChange={e => handleSubirDocumento(cot.id, e.target.files[0])} />
+                        <input type='file' accept='.pdf,.doc,.docx,.xls,.xlsx' style={{ display: 'none' }} onChange={e => handleSubirDocumento(cot.id, e.target.files[0])} />
                       </label>
                     </div>
                   </div>

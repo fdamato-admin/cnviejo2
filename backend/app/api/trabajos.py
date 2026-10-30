@@ -1,5 +1,8 @@
-import os
-from fastapi import APIRouter, Depends, HTTPException
+﻿import os
+import uuid as _uuid
+import shutil as _shutil
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_db
@@ -7,6 +10,11 @@ from ..models import Trabajo, Cotizacion, EstadoTrabajo, EstadoCotizacion
 from ..schemas import TrabajoCreate, TrabajoUpdate, TrabajoOut, TrabajoMediaUpdate, CotizacionCreate, CotizacionUpdate, CotizacionOut
 
 router = APIRouter(prefix="/trabajos", tags=["trabajos"])
+
+DOCS_DIR = "/data/docs"
+os.makedirs(DOCS_DIR, exist_ok=True)
+
+BACKEND_URL = "https://cnviejo2-production.up.railway.app"
 
 @router.get("/", response_model=List[TrabajoOut])
 def listar_trabajos(estado: Optional[str] = None, categoria: Optional[str] = None, db: Session = Depends(get_db)):
@@ -81,6 +89,28 @@ def agregar_cotizacion(trabajo_id: int, data: CotizacionCreate, db: Session = De
     db.refresh(cotizacion)
     return cotizacion
 
+@router.get("/cotizaciones/docs/{nombre}")
+def descargar_documento(nombre: str):
+    ruta = os.path.join(DOCS_DIR, nombre)
+    if not os.path.exists(ruta):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(ruta)
+
+@router.post("/cotizaciones/{cotizacion_id}/documento")
+async def subir_documento(cotizacion_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    cotizacion = db.query(Cotizacion).filter(Cotizacion.id == cotizacion_id).first()
+    if not cotizacion:
+        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+    nombre = f"{_uuid.uuid4().hex}.{ext}"
+    ruta = os.path.join(DOCS_DIR, nombre)
+    with open(ruta, "wb") as f:
+        _shutil.copyfileobj(file.file, f)
+    url = f"{BACKEND_URL}/api/trabajos/cotizaciones/docs/{nombre}"
+    cotizacion.documento_url = url
+    db.commit()
+    return {"url": url}
+
 @router.put("/cotizaciones/{cotizacion_id}", response_model=CotizacionOut)
 def actualizar_cotizacion(cotizacion_id: int, data: CotizacionUpdate, db: Session = Depends(get_db)):
     cotizacion = db.query(Cotizacion).filter(Cotizacion.id == cotizacion_id).first()
@@ -99,33 +129,3 @@ def eliminar_cotizacion(cotizacion_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
     db.delete(cotizacion)
     db.commit()
-
-import uuid as _uuid
-import shutil as _shutil
-from fastapi import UploadFile, File
-
-DOCS_DIR = "/data/docs"
-os.makedirs(DOCS_DIR, exist_ok=True)
-
-@router.post("/cotizaciones/{cotizacion_id}/documento")
-async def subir_documento(cotizacion_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    cotizacion = db.query(Cotizacion).filter(Cotizacion.id == cotizacion_id).first()
-    if not cotizacion:
-        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
-    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
-    nombre = f"{_uuid.uuid4().hex}.{ext}"
-    ruta = os.path.join(DOCS_DIR, nombre)
-    with open(ruta, "wb") as f:
-        _shutil.copyfileobj(file.file, f)
-    url = f"/api/trabajos/cotizaciones/documento/{nombre}"
-    cotizacion.documento_url = url
-    db.commit()
-    return {"url": url}
-
-@router.get("/cotizaciones/documento/{nombre}")
-def descargar_documento(nombre: str):
-    from fastapi.responses import FileResponse
-    ruta = os.path.join(DOCS_DIR, nombre)
-    if not os.path.exists(ruta):
-        raise HTTPException(status_code=404, detail="Archivo no encontrado")
-    return FileResponse(ruta)
