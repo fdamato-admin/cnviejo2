@@ -27,11 +27,11 @@ const badge = (texto, bg, color) => (
   <span style={{ background: bg, color, fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>{texto}</span>
 );
 
-async function subirCloudinary(file, tipo) {
+async function subirCloudinary(file, tipo, preset = 'cnpv2_unsigned') {
   const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${tipo}/upload`;
   const fd = new FormData();
   fd.append('file', file);
-  fd.append('upload_preset', UPLOAD_PRESET);
+  fd.append('upload_preset', preset);
   const res = await fetch(url, { method: 'POST', body: fd });
   if (!res.ok) throw new Error('Error subiendo archivo');
   const data = await res.json();
