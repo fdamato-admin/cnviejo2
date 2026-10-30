@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
@@ -69,9 +69,9 @@ def eliminar_usuario(uid: int, db: Session = Depends(get_db), usuario_actual: Us
 def seed(db: Session = Depends(get_db)):
     if db.query(Usuario).count() > 0:
         raise HTTPException(status_code=400, detail="Ya existen usuarios")
-    user = Usuario(nombre="Administrador", email="admin@cnpuebloviejo2.com", password_hash=hash_password("admin2024"), activo=True)
+    user = Usuario(nombre="FDAMATO", email="fdamato@cnpv2.com", password_hash=hash_password("123456"), activo=True)
     db.add(user)
     db.flush()
     db.add(Permiso(usuario_id=user.id, modulo="*", nivel=NivelPermiso.admin))
     db.commit()
-    return {"ok": True, "email": "admin@cnpuebloviejo2.com", "password": "admin2024"}
+    return {"ok": True, "email": "fdamato@cnpv2.com", "password": "123456"}
