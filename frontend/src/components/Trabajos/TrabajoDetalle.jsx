@@ -240,7 +240,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
                       </div>
                     </div>
                     {cot.descripcion && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#555' }}>{cot.descripcion}</p>}
-                    {cot.documento_url && <a href={cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>Ver documento adjunto</a>}
+                    {cot.documento_url && <a href={'https://cnviejo2-production.up.railway.app' + cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>Ver documento adjunto</a>}
                     <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                       {cot.estado !== 'aprobada' && cot.estado !== 'rechazada' && <button onClick={() => aprobarCotizacion(cot)} style={{ padding: '5px 14px', background: '#198754', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Aprobar</button>}
                       <button onClick={() => { setCotEditar(cot); setMostrarForm(true); }} style={{ padding: '5px 14px', background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Editar</button>
