@@ -124,3 +124,20 @@ class Cotizacion(Base):
     actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
     trabajo = relationship("Trabajo", back_populates="cotizaciones")
     proveedor = relationship("Proveedor", back_populates="cotizaciones")
+
+
+from sqlalchemy import Float, Date
+
+class Suministro(Base):
+    __tablename__ = "suministros"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(200), nullable=False)
+    categoria = Column(String(100), nullable=False)
+    unidad = Column(String(50), nullable=True)
+    frecuencia_compra = Column(String(50), nullable=True)
+    proveedor = Column(String(150), nullable=True)
+    ultima_fecha_compra = Column(Date, nullable=True)
+    ultimo_precio = Column(Float, nullable=True)
+    notas = Column(Text, nullable=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())

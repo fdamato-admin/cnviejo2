@@ -141,3 +141,28 @@ class CotizacionOut(CotizacionBase):
     creado_en: datetime
     actualizado_en: Optional[datetime] = None
     class Config: from_attributes = True
+
+
+from datetime import date
+
+class SuministroBase(BaseModel):
+    nombre: str
+    categoria: str
+    unidad: Optional[str] = None
+    frecuencia_compra: Optional[str] = None
+    proveedor: Optional[str] = None
+    ultima_fecha_compra: Optional[date] = None
+    ultimo_precio: Optional[float] = None
+    notas: Optional[str] = None
+
+class SuministroCreate(SuministroBase): pass
+
+class SuministroUpdate(SuministroBase):
+    nombre: Optional[str] = None
+    categoria: Optional[str] = None
+
+class SuministroOut(SuministroBase):
+    id: int
+    creado_en: datetime
+    actualizado_en: Optional[datetime] = None
+    class Config: from_attributes = True
