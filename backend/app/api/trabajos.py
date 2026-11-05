@@ -1,4 +1,4 @@
-﻿import os
+import os
 import uuid as _uuid
 import shutil as _shutil
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/trabajos", tags=["trabajos"])
 DOCS_DIR = "/data/docs"
 os.makedirs(DOCS_DIR, exist_ok=True)
 
-BACKEND_URL = "https://cnviejo2-production.up.railway.app"
+BACKEND_URL = "https://cnviejo2-production-46d5.up.railway.app"
 
 @router.get("/", response_model=List[TrabajoOut])
 def listar_trabajos(estado: Optional[str] = None, categoria: Optional[str] = None, db: Session = Depends(get_db)):
