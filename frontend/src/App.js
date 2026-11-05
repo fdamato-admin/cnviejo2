@@ -1,13 +1,15 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import Login from './components/Login';
 import ProveedoresList from './components/Proveedores/ProveedoresList';
 import Trabajos from './components/Trabajos/Trabajos';
 import Usuarios from './components/Usuarios/Usuarios';
+import Suministros from './components/Suministros/Suministros';
 
 const TABS = [
   { key: 'trabajos', label: 'Trabajos', modulo: 'trabajos' },
   { key: 'proveedores', label: 'Proveedores', modulo: 'proveedores' },
+  { key: 'suministros', label: 'Suministros', modulo: 'suministros' },
 ];
 
 function AppInner() {
@@ -51,6 +53,7 @@ function AppInner() {
       <main>
         {tab === 'trabajos' && <Trabajos />}
         {tab === 'proveedores' && <ProveedoresList />}
+        {tab === 'suministros' && <Suministros />}
         {tab === 'usuarios' && <Usuarios />}
       </main>
     </div>
