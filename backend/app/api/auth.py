@@ -64,26 +64,3 @@ def eliminar_usuario(uid: int, db: Session = Depends(get_db), usuario_actual: Us
     db.delete(user)
     db.commit()
     return {"ok": True}
-
-@router.post("/seed")
-def seed(db: Session = Depends(get_db)):
-    if db.query(Usuario).count() > 0:
-        raise HTTPException(status_code=400, detail="Ya existen usuarios")
-    user = Usuario(nombre="FDAMATO", email="fdamato@cnpv2.com", password_hash=hash_password("123456"), activo=True)
-    db.add(user)
-    db.flush()
-    db.add(Permiso(usuario_id=user.id, modulo="*", nivel=NivelPermiso.admin))
-    db.commit()
-    return {"ok": True, "email": "fdamato@cnpv2.com", "password": "123456"}
-
-@router.post("/reset-admin")
-def reset_admin(db: Session = Depends(get_db)):
-    db.query(Permiso).delete()
-    db.query(Usuario).delete()
-    db.commit()
-    user = Usuario(nombre="FDAMATO", email="fdamato@cnpv2.com", password_hash=hash_password("123456"), activo=True)
-    db.add(user)
-    db.flush()
-    db.add(Permiso(usuario_id=user.id, modulo="*", nivel=NivelPermiso.admin))
-    db.commit()
-    return {"ok": True}
