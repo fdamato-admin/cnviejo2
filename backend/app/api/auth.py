@@ -64,3 +64,5 @@ def eliminar_usuario(uid: int, db: Session = Depends(get_db), usuario_actual: Us
     db.delete(user)
     db.commit()
     return {"ok": True}
+
+from . import recuperar_admin  # noqa
