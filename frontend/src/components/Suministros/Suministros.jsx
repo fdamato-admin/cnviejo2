@@ -199,8 +199,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   { t: 'Categoría', k: 'categoria' },
                   { t: 'Unidad' },
                   { t: 'Cantidad' },
-                  { t: 'Frecuencia' },
-                  { t: 'Último proveedor' },
+                  { t: 'Proveedor' },
                   { t: 'Fecha de compra', k: 'ultima_fecha_compra' },
                   { t: 'Pagado en' },
                   { t: 'Precio unit.' },
@@ -229,7 +228,6 @@ function Compras({ pedido, onPedidoUsado }) {
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.unidad || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.cantidad ?? '—'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.frecuencia_compra || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(s.ultima_fecha_compra)}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.moneda_pago || '—'}</td>

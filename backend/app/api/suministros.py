@@ -3,10 +3,23 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from ..database import get_db
-from ..models import Suministro, Configuracion
+from ..models import Suministro, Configuracion, CompraSuministro
 from ..schemas import SuministroCreate, SuministroUpdate, SuministroOut
 
 router = APIRouter(prefix="/suministros", tags=["Suministros"])
+
+def _registrar_compra(db, s):
+    if not s.ultima_fecha_compra:
+        return
+    existe = db.query(CompraSuministro).filter(
+        CompraSuministro.suministro_id == s.id,
+        CompraSuministro.fecha_compra == s.ultima_fecha_compra,
+    ).first()
+    if existe:
+        existe.cantidad = s.cantidad
+    else:
+        db.add(CompraSuministro(suministro_id=s.id, fecha_compra=s.ultima_fecha_compra, cantidad=s.cantidad))
+
 
 @router.get("/", response_model=List[SuministroOut])
 def listar_suministros(
@@ -36,6 +49,8 @@ def obtener_suministro(id: int, db: Session = Depends(get_db)):
 def crear_suministro(data: SuministroCreate, db: Session = Depends(get_db)):
     s = Suministro(**data.model_dump())
     db.add(s)
+    db.flush()
+    _registrar_compra(db, s)
     db.commit()
     db.refresh(s)
     return s
@@ -47,6 +62,9 @@ def actualizar_suministro(id: int, data: SuministroUpdate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Suministro no encontrado")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(s, k, v)
+    db.flush()
+    if "ultima_fecha_compra" in data.model_fields_set:
+        _registrar_compra(db, s)
     db.commit()
     db.refresh(s)
     return s
@@ -81,3 +99,25 @@ def guardar_iva(data: dict, db: Session = Depends(get_db)):
         db.add(Configuracion(clave="iva_porcentaje", valor=str(valor)))
     db.commit()
     return {"iva_porcentaje": valor}
+
+
+@router.get("/config/frecuencias")
+def frecuencias_compra(db: Session = Depends(get_db)):
+    historial = {}
+    for c in db.query(CompraSuministro).all():
+        historial.setdefault(c.suministro_id, set()).add(c.fecha_compra)
+    salida = []
+    for s in db.query(Suministro).all():
+        fechas = set(historial.get(s.id, set()))
+        if s.ultima_fecha_compra:
+            fechas.add(s.ultima_fecha_compra)
+        fechas = sorted(fechas)
+        promedio = None
+        if len(fechas) >= 2:
+            promedio = (fechas[-1] - fechas[0]).days / (len(fechas) - 1)
+        salida.append({
+            "nombre": (s.nombre or "").strip().upper(),
+            "promedio_dias": promedio,
+            "compras": len(fechas),
+        })
+    return salida

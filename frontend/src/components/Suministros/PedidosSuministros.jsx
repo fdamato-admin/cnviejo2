@@ -20,6 +20,7 @@ function formatFecha(fecha) {
 export default function PedidosSuministros({ onComprar }) {
   const [pedidos, setPedidos] = useState([]);
   const [existentes, setExistentes] = useState([]);
+  const [frecuencias, setFrecuencias] = useState({});
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState('Pendiente');
   const [modal, setModal] = useState(false);
@@ -49,7 +50,21 @@ export default function PedidosSuministros({ onComprar }) {
     API.get('/suministros/')
       .then(r => setExistentes(Array.isArray(r.data) ? r.data : []))
       .catch(() => {});
+    API.get('/suministros/config/frecuencias')
+      .then(r => {
+        const m = {};
+        (Array.isArray(r.data) ? r.data : []).forEach(f => { m[f.nombre] = f; });
+        setFrecuencias(m);
+      })
+      .catch(() => {});
   }, []);
+
+  const textoFrecuencia = (nombre) => {
+    const f = frecuencias[(nombre || '').trim().toUpperCase()];
+    if (!f || f.promedio_dias === null || f.promedio_dias === undefined) return 'Sin datos aún';
+    const d = Math.round(f.promedio_dias);
+    return `Cada ${d} día${d !== 1 ? 's' : ''} (${f.compras} compras)`;
+  };
 
   const abrirNuevo = () => {
     setEditando(null); setForm({ ...vacio, fecha_pedido: hoy() }); setError(''); setAviso(''); setModal(true);
@@ -148,7 +163,7 @@ export default function PedidosSuministros({ onComprar }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
-                {['Fecha de solicitud', 'Suministro', 'Cantidad', 'Unidad', 'Nota', 'Estado', ''].map(h => (
+                {['Fecha de solicitud', 'Suministro', 'Cantidad', 'Unidad', 'Nota', 'Estado', '', 'Frecuencia de compra'].map(h => (
                   <th key={h || 'acc'} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -175,6 +190,7 @@ export default function PedidosSuministros({ onComprar }) {
                     <button style={{ ...btn, marginRight: 8 }} onClick={() => abrirEditar(p)}>Editar</button>
                     <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => setConfirmEliminar(p)}>Eliminar</button>
                   </td>
+                  <td style={{ padding: '10px 14px', color: '#777', fontSize: 13, whiteSpace: 'nowrap' }}>{textoFrecuencia(p.nombre)}</td>
                 </tr>
               ))}
             </tbody>

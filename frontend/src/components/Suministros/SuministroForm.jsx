@@ -21,17 +21,6 @@ const CATEGORIAS = [
   'Otro',
 ];
 
-const FRECUENCIAS = [
-  'Semanal',
-  'Quincenal',
-  'Mensual',
-  'Bimestral',
-  'Trimestral',
-  'Semestral',
-  'Anual',
-  'Según consumo',
-];
-
 const UNIDADES_BASE = [
   'UNIDAD', 'PAR', 'DOCENA', 'CIENTO', 'MILLAR', 'PIEZA', 'JUEGO', 'KIT', 'SET',
   'CAJA', 'PAQUETE', 'BOLSA', 'SACO', 'BULTO', 'FARDO', 'PALET',
@@ -157,6 +146,9 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
 
   const esBs = !form.moneda_pago || form.moneda_pago === 'Bs';
   const pct = vacioONulo(form.iva_porcentaje) ? ivaDefecto : num(form.iva_porcentaje);
+  // El IVA solo se suma cuando el documento es Factura. Con Nota de Entrega (u otro) no hay IVA.
+  const aplicaIva = form.tipo_documento === 'Factura';
+  const pctEf = aplicaIva ? pct : 0;
   const simbolo = SIMBOLO[form.moneda_pago] || '';
 
   // Cálculos en Bs
@@ -164,13 +156,13 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
   const qty = vacioONulo(form.cantidad) || num(form.cantidad) <= 0 ? 1 : num(form.cantidad);
   const hayBase = !vacioONulo(form.precio_bs);
   const subBs = hayBase ? redondear(num(form.precio_bs) * qty) : null;
-  const ivaBs = hayBase ? redondear(subBs * pct / 100) : null;
+  const ivaBs = hayBase ? redondear(subBs * pctEf / 100) : null;
   const totalBs = hayBase ? redondear(subBs + ivaBs) : null;
 
   // Cálculos en la moneda de pago (dólares, euros, USDT)
   const hayPrecio = !vacioONulo(form.ultimo_precio);
   const subDivisa = hayPrecio ? redondear(num(form.ultimo_precio) * qty) : null;
-  const ivaDivisa = hayPrecio ? redondear(subDivisa * pct / 100) : null;
+  const ivaDivisa = hayPrecio ? redondear(subDivisa * pctEf / 100) : null;
   const totalDivisa = hayPrecio ? redondear(subDivisa + ivaDivisa) : null;
 
   const guardarIvaDefecto = async () => {
@@ -207,7 +199,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
         cantidad: aNum(form.cantidad),
         estado_recepcion: form.estado_recepcion || null,
         ultimo_precio: aNum(form.ultimo_precio),
-        iva_porcentaje: pct,
+        iva_porcentaje: aplicaIva ? pct : null,
         tasa_cambio: esBs ? aNum(form.tasa_cambio) : null,
         precio_bs: esBs ? aNum(form.precio_bs) : null,
         iva_bs: esBs ? ivaBs : null,
@@ -312,9 +304,9 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
             <UnidadCombo value={form.unidad} onChange={v => set('unidad', v)} opciones={UNIDADES} estilo={estiloInput} />
           </div>
 
-          {lista('Frecuencia de compra', 'frecuencia_compra', FRECUENCIAS)}
+          {lista('Tipo de documento', 'tipo_documento', DOCUMENTOS)}
           <div style={{ marginBottom: 16 }}>
-            <label style={estiloLabel}>Último proveedor</label>
+            <label style={estiloLabel}>Proveedor</label>
             <UnidadCombo
               value={form.proveedor}
               onChange={v => set('proveedor', v)}
@@ -325,13 +317,14 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
               textoCrear="+ Crear proveedor"
             />
           </div>
+          {form.tipo_documento === 'Otro' && (
+            <div style={{ gridColumn: '1 / -1' }}>{campo('ESPECIFIQUE', 'documento_otro', 'text', true)}</div>
+          )}
 
           {campo('Fecha de compra', 'ultima_fecha_compra', 'date')}
           {lista('Pagado en', 'moneda_pago', MONEDAS)}
 
           {campo('Cantidad comprada', 'cantidad', 'number', false, { step: '0.01', min: '0' })}
-          {lista('Estado de recepción', 'estado_recepcion', ['Por recibir', 'Recibido'])}
-
           {campo(etiquetaPrecio, 'ultimo_precio', 'number', false, { step: '0.01', min: '0' })}
 
           {esBs ? (
@@ -342,20 +335,19 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
                 Si escribes el precio unitario en dólares y la tasa, el precio en Bs se calcula solo. Si el precio ya está en Bs, escríbelo directo.
               </div>
             </>
-          ) : (
-            <div />
-          )}
+          ) : null}
 
           <div style={{ marginBottom: 16 }}>
             <label style={estiloLabel}>IVA (%)</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="number" step="0.01" min="0" max="100"
-                value={vacioONulo(form.iva_porcentaje) ? ivaDefecto : form.iva_porcentaje}
+                value={aplicaIva ? (vacioONulo(form.iva_porcentaje) ? ivaDefecto : form.iva_porcentaje) : 0}
                 onChange={e => set('iva_porcentaje', e.target.value)}
-                style={estiloInput}
+                disabled={!aplicaIva}
+                style={{ ...estiloInput, background: aplicaIva ? '#fff' : '#f5f7fa' }}
               />
-              <button type="button" onClick={guardarIvaDefecto}
+              <button type="button" onClick={guardarIvaDefecto} disabled={!aplicaIva}
                 style={{ padding: '0 12px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#444', whiteSpace: 'nowrap' }}>
                 Guardar como defecto
               </button>
@@ -376,8 +368,11 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
             </>
           )}
 
-          {lista('Tipo de documento', 'tipo_documento', DOCUMENTOS)}
-          {form.tipo_documento === 'Otro' && campo('ESPECIFIQUE', 'documento_otro', 'text', true)}
+          <div style={{ gridColumn: '1 / -1', marginBottom: 16, padding: '10px 14px', background: '#fff8e1', border: '1px solid #ffe08a', borderRadius: 8, fontSize: 13, color: '#7a5b00' }}>
+            <strong>Importante:</strong> el IVA solo se suma con <strong>Factura</strong>. Con <strong>Nota de Entrega</strong> no hay IVA.
+          </div>
+
+          {lista('Estado de recepción', 'estado_recepcion', ['Por recibir', 'Recibido'])}
 
           <div style={{ gridColumn: '1 / -1', marginBottom: 16 }}>
             <label style={estiloLabel}>Notas</label>

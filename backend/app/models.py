@@ -174,3 +174,11 @@ class PedidoSuministro(Base):
     nota = _Col(_Text, nullable=True)
     estado = _Col(_Str(20), nullable=False, default="Pendiente")
     fecha_pedido = _Col(_Date, default=_dt.date.today)
+
+
+class CompraSuministro(Base):
+    __tablename__ = "compras_suministros"
+    id = _Col(_Int, primary_key=True, index=True)
+    suministro_id = _Col(_Int, nullable=False, index=True)
+    fecha_compra = _Col(_Date, nullable=False)
+    cantidad = _Col(_Flt, nullable=True)
