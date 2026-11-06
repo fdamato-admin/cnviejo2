@@ -1,3 +1,4 @@
+import hmac
 import os
 import re
 import shutil
@@ -8,7 +9,7 @@ import time
 import zipfile
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from ..auth import require_permiso
@@ -158,6 +159,17 @@ def restaurar_desde_archivo(file: UploadFile = File(...), _=ADMIN):
             os.remove(tmp)
     return {"ok": True}
 
+
+@router.get("/ultimo")
+def descargar_ultimo(x_token_respaldo: str = Header(None)):
+    esperado = os.environ.get("RESPALDO_TOKEN", "")
+    if not esperado or not x_token_respaldo or not hmac.compare_digest(x_token_respaldo, esperado):
+        raise HTTPException(status_code=403, detail="No autorizado")
+    lista = _listar()
+    if not lista:
+        raise HTTPException(status_code=404, detail="No hay respaldos")
+    nombre = lista[0]["nombre"]
+    return FileResponse(os.path.join(BACKUP_DIR, nombre), filename=nombre, media_type="application/zip")
 
 @router.get("/{nombre}")
 def descargar_respaldo(nombre: str, _=ADMIN):
