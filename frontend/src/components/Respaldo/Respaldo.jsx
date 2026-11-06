@@ -143,6 +143,17 @@ export default function Respaldo() {
       {mensaje && <p style={{ background: '#e8f6ec', color: '#1a7a3c', padding: '10px 14px', borderRadius: 8, fontSize: 14 }}>{mensaje}</p>}
       {error && <p style={{ background: '#fdecec', color: '#c00', padding: '10px 14px', borderRadius: 8, fontSize: 14 }}>{error}</p>}
 
+      <div style={{ background: '#fff', border: '1px solid #e0e6ee', borderRadius: 10, padding: '14px 18px', marginBottom: 20, fontSize: 13, color: '#444', lineHeight: 1.6 }}>
+        <strong>C&oacute;mo usar esta pantalla</strong>
+        <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+          <li><strong>Crear respaldo ahora:</strong> guarda una copia de todos los datos en este momento. Hazlo antes de borrar o cambiar muchas cosas.</li>
+          <li><strong>Respaldar en tu PC:</strong> baja la copia a tu computador como un archivo .zip. Gu&aacute;rdalo en un lugar seguro, por ejemplo una carpeta o tu Drive. Se recomienda hacerlo una vez por semana.</li>
+          <li><strong>Restaurar:</strong> devuelve el sistema al estado de esa copia. Todo lo que se haya registrado despu&eacute;s de esa fecha se pierde. Antes de restaurar, el sistema guarda una copia de lo que hab&iacute;a. Debes escribir RESTAURAR para confirmar. Si no est&aacute;s seguro, no uses esta opci&oacute;n y consulta al administrador.</li>
+          <li><strong>Restaurar desde archivo:</strong> sirve para usar un .zip que guardaste antes en tu PC. Elige el archivo y confirma.</li>
+          <li><strong>Borrar:</strong> elimina esa copia. No afecta los datos del sistema.</li>
+        </ul>
+      </div>
+
       {cargando ? (
         <p style={{ color: '#888', textAlign: 'center', padding: 40 }}>Cargando...</p>
       ) : lista.length === 0 ? (
