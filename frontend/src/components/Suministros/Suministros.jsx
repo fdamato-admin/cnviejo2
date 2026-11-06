@@ -21,6 +21,17 @@ function formatPrecio(precio) {
   return `$${parseFloat(precio).toFixed(2)}`;
 }
 
+function formatBs(valor) {
+  if (!valor && valor !== 0) return '—';
+  return `Bs ${Number(valor).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDocumento(s) {
+  if (!s.tipo_documento) return '—';
+  if (s.tipo_documento === 'Otro') return s.documento_otro || 'Otro';
+  return s.tipo_documento;
+}
+
 export default function Suministros() {
   const [suministros, setSuministros] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -62,7 +73,7 @@ export default function Suministros() {
   };
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ padding: '24px 32px', maxWidth: 1300, margin: '0 auto' }}>
 
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -106,7 +117,7 @@ export default function Suministros() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
-                {['Nombre', 'Categoría', 'Unidad', 'Frecuencia', 'Proveedor habitual', 'Última compra', 'Último precio', ''].map(h => (
+                {['Nombre', 'Categoría', 'Unidad', 'Frecuencia', 'Último proveedor', 'Fecha de compra', 'Precio (USD)', 'Total (Bs)', 'Documento', ''].map(h => (
                   <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -124,9 +135,13 @@ export default function Suministros() {
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.frecuencia_compra || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(s.ultima_fecha_compra)}</td>
-                  <td style={{ padding: '10px 14px', fontWeight: 600, color: s.ultimo_precio ? '#1a7a3c' : '#aaa' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 600, color: s.ultimo_precio ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
                     {formatPrecio(s.ultimo_precio)}
                   </td>
+                  <td style={{ padding: '10px 14px', fontWeight: 600, color: s.monto_total_bs ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
+                    {formatBs(s.monto_total_bs)}
+                  </td>
+                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatDocumento(s)}</td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <button onClick={() => abrirEditar(s)}
                       style={{ marginRight: 8, padding: '5px 12px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer', color: '#444' }}>

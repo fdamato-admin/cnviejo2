@@ -28,6 +28,19 @@ const FRECUENCIAS = [
   'Según consumo',
 ];
 
+const UNIDADES = [
+  'UNIDAD', 'PAR', 'DOCENA', 'CIENTO', 'MILLAR', 'PIEZA', 'JUEGO', 'KIT', 'SET',
+  'CAJA', 'PAQUETE', 'BOLSA', 'SACO', 'BULTO', 'FARDO', 'PALET',
+  'ROLLO', 'BOBINA', 'CINTA', 'LÁMINA', 'PLANCHA', 'HOJA', 'RESMA', 'BARRA', 'TUBO', 'CABILLA', 'VARILLA',
+  'LITRO', 'MILILITRO', 'GALÓN', 'CUÑETE', 'TAMBOR', 'BARRIL', 'BIDÓN', 'BOTELLA', 'LATA', 'ENVASE', 'FRASCO', 'POTE', 'BALDE', 'CARTUCHO', 'ESPRAY',
+  'KILOGRAMO', 'GRAMO', 'LIBRA', 'ONZA', 'TONELADA',
+  'METRO', 'METRO LINEAL', 'CENTÍMETRO', 'MILÍMETRO', 'PULGADA', 'PIE', 'YARDA',
+  'METRO CUADRADO', 'METRO CÚBICO', 'PIE CUADRADO', 'PIE CÚBICO',
+  'TABLETA', 'PASTILLA', 'SOBRE', 'SERVICIO', 'HORA', 'DÍA', 'MES',
+];
+
+const DOCUMENTOS = ['Nota de Entrega', 'Factura', 'Otro'];
+
 const vacio = {
   nombre: '',
   categoria: '',
@@ -36,27 +49,56 @@ const vacio = {
   proveedor: '',
   ultima_fecha_compra: '',
   ultimo_precio: '',
+  tasa_cambio: '',
+  precio_bs: '',
+  iva_bs: '',
+  tipo_documento: '',
+  documento_otro: '',
   notas: '',
 };
 
+const vacioONulo = (v) => v === '' || v === null || v === undefined;
+const aNum = (v) => (vacioONulo(v) ? null : parseFloat(v));
+const num = (v) => (vacioONulo(v) ? 0 : parseFloat(v) || 0);
+
+const estiloInput = { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
+const estiloLabel = { display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 };
+
 export default function SuministroForm({ suministro, onClose }) {
-  const [form, setForm] = useState(suministro ? { ...suministro } : { ...vacio });
+  const [form, setForm] = useState(suministro ? { ...vacio, ...suministro } : { ...vacio });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
-  const CAMPOS_TEXTO = ['nombre', 'unidad', 'proveedor', 'notas'];
+  const CAMPOS_TEXTO = ['nombre', 'proveedor', 'notas', 'documento_otro'];
   const set = (k, v) => setForm(f => ({ ...f, [k]: CAMPOS_TEXTO.includes(k) ? v.toUpperCase() : v }));
+
+  const hayMontoBs = !vacioONulo(form.precio_bs) || !vacioONulo(form.iva_bs);
+  const totalBs = hayMontoBs ? Math.round((num(form.precio_bs) + num(form.iva_bs)) * 100) / 100 : null;
+
+  const unidades = form.unidad && !UNIDADES.includes(form.unidad) ? [form.unidad, ...UNIDADES] : UNIDADES;
 
   const guardar = async () => {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
     if (!form.categoria) { setError('Selecciona una categoría'); return; }
+    if (form.tipo_documento === 'Otro' && !(form.documento_otro || '').trim()) {
+      setError('Especifique el tipo de documento');
+      return;
+    }
     setGuardando(true);
     setError('');
     try {
       const payload = {
         ...form,
-        ultimo_precio: form.ultimo_precio ? parseFloat(form.ultimo_precio) : null,
+        unidad: form.unidad || null,
+        frecuencia_compra: form.frecuencia_compra || null,
         ultima_fecha_compra: form.ultima_fecha_compra || null,
+        ultimo_precio: aNum(form.ultimo_precio),
+        tasa_cambio: aNum(form.tasa_cambio),
+        precio_bs: aNum(form.precio_bs),
+        iva_bs: aNum(form.iva_bs),
+        monto_total_bs: totalBs,
+        tipo_documento: form.tipo_documento || null,
+        documento_otro: form.tipo_documento === 'Otro' ? (form.documento_otro || null) : null,
       };
       if (suministro) {
         await API.put(`/suministros/${suministro.id}`, payload);
@@ -71,23 +113,36 @@ export default function SuministroForm({ suministro, onClose }) {
     }
   };
 
-  const campo = (label, key, tipo = 'text', requerido = false) => (
+  const campo = (label, key, tipo = 'text', requerido = false, extra = {}) => (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>
+      <label style={estiloLabel}>
         {label}{requerido && <span style={{ color: '#e24b4a' }}> *</span>}
       </label>
       <input
         type={tipo}
-        value={form[key] || ''}
+        value={form[key] ?? ''}
         onChange={e => set(key, e.target.value)}
-        style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+        style={estiloInput}
+        {...extra}
       />
+    </div>
+  );
+
+  const lista = (label, key, opciones, requerido = false) => (
+    <div style={{ marginBottom: 16 }}>
+      <label style={estiloLabel}>
+        {label}{requerido && <span style={{ color: '#e24b4a' }}> *</span>}
+      </label>
+      <select value={form[key] || ''} onChange={e => set(key, e.target.value)} style={estiloInput}>
+        <option value="">Seleccionar...</option>
+        {opciones.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
@@ -98,66 +153,39 @@ export default function SuministroForm({ suministro, onClose }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
 
-          {/* Nombre */}
           <div style={{ gridColumn: '1 / -1' }}>{campo('Nombre del suministro', 'nombre', 'text', true)}</div>
 
-          {/* Categoría */}
+          {lista('Categoría', 'categoria', CATEGORIAS, true)}
+          {lista('Unidad de medida', 'unidad', unidades)}
+
+          {lista('Frecuencia de compra', 'frecuencia_compra', FRECUENCIAS)}
+          {campo('Último proveedor', 'proveedor')}
+
+          {campo('Fecha de compra', 'ultima_fecha_compra', 'date')}
+          {campo('Precio (USD)', 'ultimo_precio', 'number', false, { step: '0.01', min: '0' })}
+
+          {campo('Tasa de cambio (Bs por USD)', 'tasa_cambio', 'number', false, { step: '0.0001', min: '0' })}
+          {campo('Precio en Bs (base imponible)', 'precio_bs', 'number', false, { step: '0.01', min: '0' })}
+
+          {campo('IVA en Bs', 'iva_bs', 'number', false, { step: '0.01', min: '0' })}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>
-              Categoría <span style={{ color: '#e24b4a' }}>*</span>
-            </label>
-            <select value={form.categoria} onChange={e => set('categoria', e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14 }}>
-              <option value="">Seleccionar...</option>
-              {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {/* Unidad */}
-          {campo('Unidad (litros, kg, unid...)', 'unidad')}
-
-          {/* Frecuencia */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>Frecuencia de compra</label>
-            <select value={form.frecuencia_compra} onChange={e => set('frecuencia_compra', e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14 }}>
-              <option value="">Seleccionar...</option>
-              {FRECUENCIAS.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-
-          {/* Proveedor habitual */}
-          {campo('Proveedor habitual', 'proveedor')}
-
-          {/* Última fecha de compra */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>Última fecha de compra</label>
+            <label style={estiloLabel}>Monto total en Bs (base + IVA)</label>
             <input
-              type="date"
-              value={form.ultima_fecha_compra || ''}
-              onChange={e => set('ultima_fecha_compra', e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+              type="text"
+              readOnly
+              value={totalBs === null ? '' : totalBs.toFixed(2)}
+              placeholder="Se calcula solo"
+              style={{ ...estiloInput, background: '#f5f7fa', color: '#333', fontWeight: 600 }}
             />
           </div>
 
-          {/* Último precio */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>Último precio (USD)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.ultimo_precio || ''}
-              onChange={e => set('ultimo_precio', e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-            />
-          </div>
+          {lista('Tipo de documento', 'tipo_documento', DOCUMENTOS)}
+          {form.tipo_documento === 'Otro' && campo('ESPECIFIQUE', 'documento_otro', 'text', true)}
 
-          {/* Notas */}
           <div style={{ gridColumn: '1 / -1', marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>Notas</label>
+            <label style={estiloLabel}>Notas</label>
             <textarea value={form.notas || ''} onChange={e => set('notas', e.target.value)} rows={3}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+              style={{ ...estiloInput, resize: 'vertical' }} />
           </div>
         </div>
 
