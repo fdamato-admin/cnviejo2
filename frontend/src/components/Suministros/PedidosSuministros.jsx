@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import { UNIDADES } from './SuministroForm';
+import UnidadCombo from './UnidadCombo';
 
 const ESTADOS = ['Pendiente', 'Comprado'];
 const vacio = { nombre: '', cantidad: '', unidad: '', nota: '' };
@@ -204,11 +205,7 @@ export default function PedidosSuministros() {
               </div>
               <div style={{ marginBottom: 16 }}>
                 <label style={estiloLabel}>Unidad</label>
-                <input value={form.unidad} onChange={e => set('unidad', e.target.value)} list="lista-unidades-pedido"
-                  autoComplete="off" placeholder="Escribe para buscar" style={estiloInput} />
-                <datalist id="lista-unidades-pedido">
-                  {UNIDADES.map(u => <option key={u} value={u} />)}
-                </datalist>
+                <UnidadCombo value={form.unidad} onChange={v => set('unidad', v)} opciones={UNIDADES} estilo={estiloInput} />
               </div>
             </div>
 

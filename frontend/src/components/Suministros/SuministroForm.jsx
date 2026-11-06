@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../api';
+import UnidadCombo from './UnidadCombo';
 
 const CATEGORIAS = [
   'Químicos de piscina',
@@ -251,11 +252,9 @@ export default function SuministroForm({ suministro, onClose }) {
           </div>
 
           {lista('Categoría', 'categoria', CATEGORIAS, true)}
-          <div>
-            {campo('Unidad de medida', 'unidad', 'text', false, { list: 'lista-unidades', autoComplete: 'off', placeholder: 'Escribe para buscar' })}
-            <datalist id="lista-unidades">
-              {UNIDADES.map(u => <option key={u} value={u} />)}
-            </datalist>
+          <div style={{ marginBottom: 16 }}>
+            <label style={estiloLabel}>Unidad de medida</label>
+            <UnidadCombo value={form.unidad} onChange={v => set('unidad', v)} opciones={UNIDADES} estilo={estiloInput} />
           </div>
 
           {lista('Frecuencia de compra', 'frecuencia_compra', FRECUENCIAS)}
