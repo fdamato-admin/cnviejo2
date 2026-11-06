@@ -203,7 +203,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   { t: 'Último proveedor' },
                   { t: 'Fecha de compra', k: 'ultima_fecha_compra' },
                   { t: 'Pagado en' },
-                  { t: 'Precio' },
+                  { t: 'Precio unit.' },
                   { t: 'Total' },
                   { t: 'Documento' },
                   { t: 'Recepción' },

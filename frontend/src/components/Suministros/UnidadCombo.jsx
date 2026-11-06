@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const norm = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
-export default function UnidadCombo({ value, onChange, opciones, estilo }) {
+export default function UnidadCombo({ value, onChange, opciones, estilo, placeholder = 'Escribe para buscar', onCrear, textoCrear = '+ Crear nuevo' }) {
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState('');
 
@@ -20,7 +20,7 @@ export default function UnidadCombo({ value, onChange, opciones, estilo }) {
     <div style={{ position: 'relative' }}>
       <input
         value={abierto ? q : (value || '')}
-        placeholder={abierto ? (value || 'Escribe para buscar') : 'Escribe para buscar'}
+        placeholder={abierto ? (value || placeholder) : placeholder}
         onFocus={() => { setQ(''); setAbierto(true); }}
         onChange={e => setQ(e.target.value)}
         onBlur={() => { setAbierto(false); setQ(''); }}
@@ -58,6 +58,13 @@ export default function UnidadCombo({ value, onChange, opciones, estilo }) {
               {o}
             </div>
           ))}
+          {onCrear && (
+            <div
+              onMouseDown={e => { e.preventDefault(); setAbierto(false); setQ(''); onCrear(); }}
+              style={{ padding: '9px 12px', fontSize: 14, cursor: 'pointer', color: '#2a78d6', fontWeight: 600, borderTop: '1px solid #eee', position: 'sticky', bottom: 0, background: '#fff' }}>
+              {textoCrear}
+            </div>
+          )}
         </div>
       )}
     </div>

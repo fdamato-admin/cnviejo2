@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../api';
 import UnidadCombo from './UnidadCombo';
+import ProveedorForm from '../Proveedores/ProveedorForm';
+
+const etiquetaProv = (p) => (p.empresa ? `${p.nombre} - ${p.empresa}` : p.nombre).toUpperCase();
 
 const CATEGORIAS = [
   'Químicos de piscina',
@@ -78,6 +81,8 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
   const [form, setForm] = useState(suministro ? { ...vacio, ...suministro } : { ...vacio, ...(inicial || {}) });
   const [ivaDefecto, setIvaDefecto] = useState(16);
   const [existentes, setExistentes] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
+  const [mostrarProv, setMostrarProv] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
@@ -89,7 +94,27 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
     API.get('/suministros/')
       .then(r => setExistentes(Array.isArray(r.data) ? r.data : []))
       .catch(() => {});
+    API.get('/proveedores/')
+      .then(r => setProveedores(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {});
   }, []);
+
+  const opcionesProv = [...new Set(proveedores.map(etiquetaProv))].sort((a, b) => a.localeCompare(b, 'es'));
+
+  // Al cerrar la ficha de proveedor: recarga la lista y selecciona el que se acaba de crear
+  const cerrarProveedor = async () => {
+    setMostrarProv(false);
+    try {
+      const antes = new Set(proveedores.map(p => p.id));
+      const r = await API.get('/proveedores/');
+      const lista = Array.isArray(r.data) ? r.data : [];
+      setProveedores(lista);
+      const nuevo = lista.find(p => !antes.has(p.id));
+      if (nuevo) set('proveedor', etiquetaProv(nuevo));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Si viene de un pedido y el suministro ya existe, se traen sus datos fijos
   useEffect(() => {
@@ -135,14 +160,18 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
   const simbolo = SIMBOLO[form.moneda_pago] || '';
 
   // Cálculos en Bs
+  // El precio es unitario: la base imponible es precio x cantidad (si no hay cantidad, se toma 1)
+  const qty = vacioONulo(form.cantidad) || num(form.cantidad) <= 0 ? 1 : num(form.cantidad);
   const hayBase = !vacioONulo(form.precio_bs);
-  const ivaBs = hayBase ? redondear(num(form.precio_bs) * pct / 100) : null;
-  const totalBs = hayBase ? redondear(num(form.precio_bs) + ivaBs) : null;
+  const subBs = hayBase ? redondear(num(form.precio_bs) * qty) : null;
+  const ivaBs = hayBase ? redondear(subBs * pct / 100) : null;
+  const totalBs = hayBase ? redondear(subBs + ivaBs) : null;
 
   // Cálculos en la moneda de pago (dólares, euros, USDT)
   const hayPrecio = !vacioONulo(form.ultimo_precio);
-  const ivaDivisa = hayPrecio ? redondear(num(form.ultimo_precio) * pct / 100) : null;
-  const totalDivisa = hayPrecio ? redondear(num(form.ultimo_precio) + ivaDivisa) : null;
+  const subDivisa = hayPrecio ? redondear(num(form.ultimo_precio) * qty) : null;
+  const ivaDivisa = hayPrecio ? redondear(subDivisa * pct / 100) : null;
+  const totalDivisa = hayPrecio ? redondear(subDivisa + ivaDivisa) : null;
 
   const guardarIvaDefecto = async () => {
     setError(''); setAviso('');
@@ -249,8 +278,8 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
     </div>
   );
 
-  const etiquetaPrecio = form.moneda_pago === 'Euros' ? 'Precio (EUR)'
-    : form.moneda_pago === 'USDT' ? 'Precio (USDT)' : 'Precio (USD)';
+  const etiquetaPrecio = form.moneda_pago === 'Euros' ? 'Precio unitario (EUR)'
+    : form.moneda_pago === 'USDT' ? 'Precio unitario (USDT)' : 'Precio unitario (USD)';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
@@ -284,7 +313,18 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
           </div>
 
           {lista('Frecuencia de compra', 'frecuencia_compra', FRECUENCIAS)}
-          {campo('Último proveedor', 'proveedor')}
+          <div style={{ marginBottom: 16 }}>
+            <label style={estiloLabel}>Último proveedor</label>
+            <UnidadCombo
+              value={form.proveedor}
+              onChange={v => set('proveedor', v)}
+              opciones={opcionesProv}
+              estilo={estiloInput}
+              placeholder="Escribe para buscar proveedor"
+              onCrear={() => setMostrarProv(true)}
+              textoCrear="+ Crear proveedor"
+            />
+          </div>
 
           {campo('Fecha de compra', 'ultima_fecha_compra', 'date')}
           {lista('Pagado en', 'moneda_pago', MONEDAS)}
@@ -297,9 +337,9 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
           {esBs ? (
             <>
               {campo('Tasa de cambio (Bs por USD)', 'tasa_cambio', 'number', false, { step: '0.0001', min: '0' })}
-              {campo('Precio en Bs (base imponible)', 'precio_bs', 'number', false, { step: '0.01', min: '0' })}
+              {campo('Precio unitario en Bs', 'precio_bs', 'number', false, { step: '0.01', min: '0' })}
               <div style={{ gridColumn: '1 / -1', marginTop: -8, marginBottom: 16, fontSize: 12, color: '#888' }}>
-                Si escribes el precio en dólares y la tasa, el Precio en Bs se calcula solo. Si el precio ya está en Bs, escríbelo directo.
+                Si escribes el precio unitario en dólares y la tasa, el precio en Bs se calcula solo. Si el precio ya está en Bs, escríbelo directo.
               </div>
             </>
           ) : (
@@ -324,11 +364,13 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
 
           {esBs ? (
             <>
+              {calculado('Base imponible en Bs (precio × cantidad)', subBs)}
               {calculado('IVA en Bs', ivaBs)}
               {calculado('Monto total en Bs (base + IVA)', totalBs)}
             </>
           ) : (
             <>
+              {calculado(`Subtotal en ${form.moneda_pago} (precio × cantidad)`, subDivisa, simbolo)}
               {calculado(`IVA (${form.moneda_pago})`, ivaDivisa, simbolo)}
               {calculado(`Monto total (${form.moneda_pago})`, totalDivisa, simbolo)}
             </>
@@ -357,6 +399,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
           </button>
         </div>
       </div>
+      {mostrarProv && <ProveedorForm proveedor={null} onClose={cerrarProveedor} />}
     </div>
   );
 }
