@@ -182,3 +182,5 @@ class CompraSuministro(Base):
     suministro_id = _Col(_Int, nullable=False, index=True)
     fecha_compra = _Col(_Date, nullable=False)
     cantidad = _Col(_Flt, nullable=True)
+    monto_usd = _Col(_Flt, nullable=True)
+    nombre = _Col(_Str(200), nullable=True)

@@ -8,6 +8,17 @@ from ..schemas import SuministroCreate, SuministroUpdate, SuministroOut
 
 router = APIRouter(prefix="/suministros", tags=["Suministros"])
 
+def _monto_usd(s):
+    m = s.moneda_pago or "Bs"
+    if m == "Bs":
+        if s.monto_total_bs is not None and s.tasa_cambio:
+            return s.monto_total_bs / s.tasa_cambio
+        return None
+    if m == "Euros":
+        return None
+    return s.monto_total_divisa
+
+
 def _registrar_compra(db, s):
     if not s.ultima_fecha_compra:
         return
@@ -17,8 +28,10 @@ def _registrar_compra(db, s):
     ).first()
     if existe:
         existe.cantidad = s.cantidad
+        existe.monto_usd = _monto_usd(s)
+        existe.nombre = s.nombre
     else:
-        db.add(CompraSuministro(suministro_id=s.id, fecha_compra=s.ultima_fecha_compra, cantidad=s.cantidad))
+        db.add(CompraSuministro(suministro_id=s.id, fecha_compra=s.ultima_fecha_compra, cantidad=s.cantidad, monto_usd=_monto_usd(s), nombre=s.nombre))
 
 
 @router.get("/", response_model=List[SuministroOut])
