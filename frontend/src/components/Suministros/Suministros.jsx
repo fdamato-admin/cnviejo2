@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import SuministroForm from './SuministroForm';
+import PedidosSuministros from './PedidosSuministros';
 
 const CATEGORIAS = [
   'Químicos de piscina', 'Equipos de piscina', 'Jardinería y áreas verdes',
@@ -16,9 +17,20 @@ function formatFecha(fecha) {
   return `${d}/${m}/${y}`;
 }
 
-function formatPrecio(precio) {
+function formatPrecio(precio, moneda) {
   if (!precio && precio !== 0) return '—';
-  return `$${parseFloat(precio).toFixed(2)}`;
+  const simbolo = moneda === 'Euros' ? '€' : moneda === 'USDT' ? 'USDT ' : '$';
+  return `${simbolo}${parseFloat(precio).toFixed(2)}`;
+}
+
+function formatTotal(s) {
+  if (s.monto_total_bs || s.monto_total_bs === 0) {
+    if (s.monto_total_bs !== null) return formatBs(s.monto_total_bs);
+  }
+  if (s.monto_total_divisa || s.monto_total_divisa === 0) {
+    if (s.monto_total_divisa !== null) return formatPrecio(s.monto_total_divisa, s.moneda_pago);
+  }
+  return '—';
 }
 
 function formatBs(valor) {
@@ -33,6 +45,29 @@ function formatDocumento(s) {
 }
 
 export default function Suministros() {
+  const [vista, setVista] = useState('compras');
+  const pestana = (id, texto) => (
+    <button onClick={() => setVista(id)}
+      style={{
+        padding: '10px 20px', border: 'none', background: 'none', fontSize: 14, cursor: 'pointer',
+        fontWeight: vista === id ? 600 : 400, color: vista === id ? '#2a78d6' : '#666',
+        borderBottom: vista === id ? '2px solid #2a78d6' : '2px solid transparent',
+      }}>
+      {texto}
+    </button>
+  );
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 4, padding: '0 32px', borderBottom: '1px solid #eee', maxWidth: 1300, margin: '0 auto' }}>
+        {pestana('compras', 'Compras')}
+        {pestana('pedidos', 'Pedido de Suministros')}
+      </div>
+      {vista === 'compras' ? <Compras /> : <PedidosSuministros />}
+    </div>
+  );
+}
+
+function Compras() {
   const [suministros, setSuministros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [buscar, setBuscar] = useState('');
@@ -57,6 +92,26 @@ export default function Suministros() {
   }, [buscar, categoria]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  const [orden, setOrden] = useState({ campo: 'nombre', dir: 'asc' });
+
+  const cambiarOrden = (campo) => {
+    setOrden(o => o.campo === campo
+      ? { campo, dir: o.dir === 'asc' ? 'desc' : 'asc' }
+      : { campo, dir: campo === 'ultima_fecha_compra' ? 'desc' : 'asc' });
+  };
+
+  const ordenados = [...suministros].sort((a, b) => {
+    const va = a[orden.campo];
+    const vb = b[orden.campo];
+    const aVacio = va === null || va === undefined || va === '';
+    const bVacio = vb === null || vb === undefined || vb === '';
+    if (aVacio && bVacio) return 0;
+    if (aVacio) return 1;
+    if (bVacio) return -1;
+    const r = String(va).localeCompare(String(vb), 'es');
+    return orden.dir === 'asc' ? r : -r;
+  });
 
   const abrirNuevo = () => { setSeleccionado(null); setModalAbierto(true); };
   const abrirEditar = (s) => { setSeleccionado(s); setModalAbierto(true); };
@@ -85,7 +140,7 @@ export default function Suministros() {
         </div>
         <button onClick={abrirNuevo}
           style={{ padding: '10px 20px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-          + Nuevo suministro
+          + Ingresar compra
         </button>
       </div>
 
@@ -110,20 +165,37 @@ export default function Suministros() {
       ) : suministros.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
           <p style={{ fontSize: 16 }}>No hay suministros registrados</p>
-          <p style={{ fontSize: 13, marginTop: 8 }}>Presiona "Nuevo suministro" para agregar el primero</p>
+          <p style={{ fontSize: 13, marginTop: 8 }}>Presiona "Ingresar compra" para agregar el primero</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
-                {['Nombre', 'Categoría', 'Unidad', 'Frecuencia', 'Último proveedor', 'Fecha de compra', 'Precio (USD)', 'Total (Bs)', 'Documento', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap' }}>{h}</th>
+                {[
+                  { t: 'Nombre', k: 'nombre' },
+                  { t: 'Categoría', k: 'categoria' },
+                  { t: 'Unidad' },
+                  { t: 'Frecuencia' },
+                  { t: 'Último proveedor' },
+                  { t: 'Fecha de compra', k: 'ultima_fecha_compra' },
+                  { t: 'Pagado en' },
+                  { t: 'Precio' },
+                  { t: 'Total' },
+                  { t: 'Documento' },
+                  { t: '' },
+                ].map(h => (
+                  <th key={h.t || 'acciones'}
+                    onClick={h.k ? () => cambiarOrden(h.k) : undefined}
+                    title={h.k ? 'Clic para ordenar' : undefined}
+                    style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none' }}>
+                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' ↕' : '')}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {suministros.map((s, i) => (
+              {ordenados.map((s, i) => (
                 <tr key={s.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafbfd', borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px 14px', fontWeight: 500 }}>{s.nombre}</td>
                   <td style={{ padding: '10px 14px' }}>
@@ -135,11 +207,12 @@ export default function Suministros() {
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.frecuencia_compra || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(s.ultima_fecha_compra)}</td>
+                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.moneda_pago || '—'}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: s.ultimo_precio ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
-                    {formatPrecio(s.ultimo_precio)}
+                    {formatPrecio(s.ultimo_precio, s.moneda_pago)}
                   </td>
-                  <td style={{ padding: '10px 14px', fontWeight: 600, color: s.monto_total_bs ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
-                    {formatBs(s.monto_total_bs)}
+                  <td style={{ padding: '10px 14px', fontWeight: 600, color: formatTotal(s) !== '—' ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
+                    {formatTotal(s)}
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatDocumento(s)}</td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
