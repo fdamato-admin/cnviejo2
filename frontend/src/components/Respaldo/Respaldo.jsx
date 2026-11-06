@@ -76,7 +76,7 @@ export default function Respaldo() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      aviso(false, 'No se pudo descargar el respaldo.');
+      aviso(false, 'No se pudo guardar el respaldo en tu PC.');
     }
   };
 
@@ -164,7 +164,7 @@ export default function Respaldo() {
                   <td style={{ padding: '10px 14px', color: '#666' }}>{TIPOS[r.tipo] || r.tipo}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{formatPeso(r.tamano)}</td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                    <button style={{ ...btn, marginRight: 8 }} onClick={() => descargar(r.nombre)}>Descargar</button>
+                    <button style={{ ...btn, marginRight: 8 }} onClick={() => descargar(r.nombre)}>Respaldar en tu PC</button>
                     <button style={{ ...btn, marginRight: 8 }} disabled={ocupado} onClick={() => setModal({ tipo: 'restaurar', nombre: r.nombre })}>Restaurar</button>
                     <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} disabled={ocupado} onClick={() => setModal({ tipo: 'borrar', nombre: r.nombre })}>Borrar</button>
                   </td>
