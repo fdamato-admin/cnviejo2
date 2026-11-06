@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -138,6 +138,12 @@ class Suministro(Base):
     proveedor = Column(String(150), nullable=True)
     ultima_fecha_compra = Column(Date, nullable=True)
     ultimo_precio = Column(Float, nullable=True)
+    precio_bs = Column(Float, nullable=True)
+    tasa_cambio = Column(Float, nullable=True)
+    tipo_documento = Column(String(30), nullable=True)
+    documento_otro = Column(String(150), nullable=True)
+    iva_bs = Column(Float, nullable=True)
+    monto_total_bs = Column(Float, nullable=True)
     notas = Column(Text, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())

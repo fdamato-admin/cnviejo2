@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel
+from pydantic import BaseModel
 from typing import Optional, List
 from decimal import Decimal
 from datetime import datetime
@@ -153,6 +153,12 @@ class SuministroBase(BaseModel):
     proveedor: Optional[str] = None
     ultima_fecha_compra: Optional[date] = None
     ultimo_precio: Optional[float] = None
+    precio_bs: Optional[float] = None
+    tasa_cambio: Optional[float] = None
+    tipo_documento: Optional[str] = None
+    documento_otro: Optional[str] = None
+    iva_bs: Optional[float] = None
+    monto_total_bs: Optional[float] = None
     notas: Optional[str] = None
 
 class SuministroCreate(SuministroBase): pass
