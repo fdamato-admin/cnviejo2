@@ -15,11 +15,14 @@ const th = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#
 const td = { padding: '9px 14px', borderBottom: '1px solid #eee', fontSize: 14 };
 const caja = { background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 20, marginBottom: 20 };
 
-function Fila({ etiqueta, valor, signo, fuerte }) {
+function Fila({ etiqueta, valor, signo, fuerte, pct }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: fuerte ? 16 : 14, fontWeight: fuerte ? 700 : 400, borderTop: fuerte ? '1px solid #ddd' : 'none', marginTop: fuerte ? 6 : 0 }}>
       <span style={{ color: fuerte ? '#222' : '#555' }}>{signo ? `${signo} ` : ''}{etiqueta}</span>
-      <span>{usd(valor)}</span>
+      <span>
+        {usd(valor)}
+        {pct !== undefined && <span style={{ display: 'inline-block', minWidth: 62, textAlign: 'right', fontSize: 13, color: '#888', fontWeight: 400 }}>{pct.toFixed(1)}%</span>}
+      </span>
     </div>
   );
 }
@@ -93,6 +96,9 @@ export default function ImpactoRecibo() {
     : 0;
   const mesTexto = new Date(`${mes}-02`).toLocaleDateString('es-VE', { month: 'long', year: 'numeric' });
   const proyectado = conRealizado + porRealizarVilla;
+  const pctDe = (monto) => (proyectado > 0 ? (porVilla(monto) / proyectado) * 100 : 0);
+  const pctVilla = (v) => (proyectado > 0 ? (v / proyectado) * 100 : 0);
+  const extraIncluido = (e) => (e.estado === 'Por realizar' ? incluirPorRealizar : true) && (esTrabajo(e) ? incluirTrabajos : incluirOtros);
   const sube = proyectado - baseVilla;
   const pctSube = baseVilla ? (sube / baseVilla) * 100 : 0;
 
@@ -182,12 +188,12 @@ export default function ImpactoRecibo() {
           </div>
         </div>
         <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-          <Fila etiqueta={`Recibo base (gastos fijos + ${data.fondo_pct}% fondo de reserva)`} valor={baseVilla} />
-          <Fila etiqueta="Compras y suministros del mes" valor={comprasVilla} signo="+" />
-          <Fila etiqueta="Otros gastos realizados" valor={otrosVilla} signo="+" />
-          <Fila etiqueta="Trabajos realizados" valor={trabajosVilla} signo="+" />
+          <Fila etiqueta={`Recibo base (gastos fijos + ${data.fondo_pct}% fondo de reserva)`} valor={baseVilla} pct={pctVilla(baseVilla)} />
+          <Fila etiqueta="Compras y suministros del mes" valor={comprasVilla} signo="+" pct={pctVilla(comprasVilla)} />
+          <Fila etiqueta="Otros gastos realizados" valor={otrosVilla} signo="+" pct={pctVilla(otrosVilla)} />
+          <Fila etiqueta="Trabajos realizados" valor={trabajosVilla} signo="+" pct={pctVilla(trabajosVilla)} />
           <Fila etiqueta="Recibo con lo ya realizado" valor={conRealizado} fuerte />
-          <Fila etiqueta="Por realizar (gastos y trabajos)" valor={porRealizarVilla} signo="+" />
+          <Fila etiqueta="Por realizar (gastos y trabajos)" valor={porRealizarVilla} signo="+" pct={pctVilla(porRealizarVilla)} />
           <Fila etiqueta="Recibo proyectado" valor={proyectado} fuerte />
         </div>
       </div>
@@ -242,7 +248,7 @@ export default function ImpactoRecibo() {
 
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{['Incluir', 'Concepto', 'Grupo', 'Tipo', 'Monto (USD)', 'Por villa', ''].map(h => <th key={h || 'acc'} style={th}>{h}</th>)}</tr></thead>
+            <thead><tr>{['Incluir', 'Concepto', 'Grupo', 'Tipo', 'Monto (USD)', 'Por villa', '% del recibo', ''].map(h => <th key={h || 'acc'} style={th}>{h}</th>)}</tr></thead>
             <tbody>
               {data.fijos.map(f => (
                 <tr key={f.id} style={{ opacity: f.activo ? 1 : 0.5 }}>
@@ -252,6 +258,7 @@ export default function ImpactoRecibo() {
                   <td style={{ ...td, color: '#666' }}>{f.tipo}</td>
                   <td style={td}>{usd(f.monto_usd)}</td>
                   <td style={td}>{usd(porVilla(f.monto_usd))}</td>
+                  <td style={{ ...td, fontWeight: 600 }}>{f.activo ? `${pctDe(f.monto_usd).toFixed(1)}%` : '—'}</td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button style={{ ...btn, marginRight: 8 }} onClick={() => setFormFijo({ ...f })}>Editar</button>
                     <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarFijo(f)}>Eliminar</button>
@@ -272,7 +279,7 @@ export default function ImpactoRecibo() {
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>{['Fecha', 'Suministro', 'Proveedor', 'Monto (USD)', 'Sube por villa'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Fecha', 'Suministro', 'Proveedor', 'Monto (USD)', 'Sube por villa', '% del recibo'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {data.compras.map((c, i) => (
                   <tr key={i}>
@@ -281,6 +288,7 @@ export default function ImpactoRecibo() {
                     <td style={{ ...td, color: '#666' }}>{c.proveedor || '—'}</td>
                     <td style={td}>{c.convertido ? usd(c.monto_usd) : <span style={{ color: '#a15c00' }}>Sin convertir</span>}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{c.convertido ? `+${usd(porVilla(c.monto_usd))}` : '—'}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{c.convertido && incluirCompras ? `${pctDe(c.monto_usd).toFixed(1)}%` : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -317,7 +325,7 @@ export default function ImpactoRecibo() {
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>{['Concepto', 'Tipo', 'Estado', 'Monto (USD)', 'Sube por villa', 'Nota', ''].map(h => <th key={h || 'acc'} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Concepto', 'Tipo', 'Estado', 'Monto (USD)', 'Sube por villa', '% del recibo', 'Nota', ''].map(h => <th key={h || 'acc'} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {data.extras.map(e => (
                   <tr key={e.id}>
@@ -328,6 +336,7 @@ export default function ImpactoRecibo() {
                     </td>
                     <td style={td}>{usd(e.monto_usd)}</td>
                     <td style={{ ...td, fontWeight: 600 }}>+{usd(porVilla(e.monto_usd))}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{extraIncluido(e) ? `${pctDe(e.monto_usd).toFixed(1)}%` : '—'}</td>
                     <td style={{ ...td, color: '#666' }}>{e.nota || '—'}</td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarExtra(e)}>Eliminar</button>
