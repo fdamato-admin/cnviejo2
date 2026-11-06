@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import date
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_db
@@ -21,6 +22,8 @@ def crear_pedido(data: PedidoSuministroCreate, db: Session = Depends(get_db)):
     if data.cantidad <= 0:
         raise HTTPException(status_code=400, detail="La cantidad debe ser mayor a cero")
     p = PedidoSuministro(**data.model_dump())
+    if not p.fecha_pedido:
+        p.fecha_pedido = date.today()
     if not p.estado:
         p.estado = "Pendiente"
     db.add(p)

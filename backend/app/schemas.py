@@ -163,6 +163,8 @@ class SuministroBase(BaseModel):
     iva_porcentaje: Optional[float] = None
     iva_divisa: Optional[float] = None
     monto_total_divisa: Optional[float] = None
+    cantidad: Optional[float] = None
+    estado_recepcion: Optional[str] = None
     notas: Optional[str] = None
 
 class SuministroCreate(SuministroBase): pass
@@ -192,10 +194,12 @@ class PedidoSuministroBase(_BM):
 
 
 class PedidoSuministroCreate(PedidoSuministroBase):
+    fecha_pedido: _Opt[_dtm.date] = None  # editable
     pass
 
 
 class PedidoSuministroUpdate(_BM):
+    fecha_pedido: _Opt[_dtm.date] = None  # editable2
     nombre: _Opt[str] = None
     cantidad: _Opt[float] = None
     unidad: _Opt[str] = None

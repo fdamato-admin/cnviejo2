@@ -19,6 +19,8 @@ def _migrar_suministros():
         "iva_porcentaje": "FLOAT",
         "iva_divisa": "FLOAT",
         "monto_total_divisa": "FLOAT",
+        "cantidad": "FLOAT",
+        "estado_recepcion": "VARCHAR(20)",
     }
     with engine.begin() as con:
         cols = [r[1] for r in con.execute(text("PRAGMA table_info(suministros)"))]

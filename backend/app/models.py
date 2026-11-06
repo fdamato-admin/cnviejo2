@@ -148,6 +148,8 @@ class Suministro(Base):
     iva_porcentaje = Column(Float, nullable=True)
     iva_divisa = Column(Float, nullable=True)
     monto_total_divisa = Column(Float, nullable=True)
+    cantidad = Column(Float, nullable=True)
+    estado_recepcion = Column(String(20), nullable=True)
     notas = Column(Text, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
