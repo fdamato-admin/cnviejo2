@@ -59,7 +59,7 @@ export default function PedidosSuministros() {
   };
 
   const set = (k, v) => setForm(f => {
-    const nf = { ...f, [k]: ['nombre', 'nota'].includes(k) ? v.toUpperCase() : v };
+    const nf = { ...f, [k]: ['nombre', 'nota', 'unidad'].includes(k) ? v.toUpperCase() : v };
     if (k === 'nombre' && !nf.unidad) {
       const m = existentes.find(x => (x.nombre || '').trim().toUpperCase() === nf.nombre.trim());
       if (m && m.unidad) nf.unidad = m.unidad;
@@ -71,6 +71,10 @@ export default function PedidosSuministros() {
     if (!form.nombre.trim()) { setError('Escribe o elige el suministro'); return; }
     const cant = parseFloat(form.cantidad);
     if (!cant || cant <= 0) { setError('La cantidad debe ser mayor a cero'); return; }
+    if (form.unidad && !UNIDADES.includes(form.unidad) && !(editando && editando.unidad === form.unidad)) {
+      setError('Elige una unidad de la lista');
+      return;
+    }
     setGuardando(true); setError(''); setAviso('');
     try {
       const payload = { nombre: form.nombre.trim(), cantidad: cant, unidad: form.unidad || null, nota: form.nota || null };
@@ -200,10 +204,11 @@ export default function PedidosSuministros() {
               </div>
               <div style={{ marginBottom: 16 }}>
                 <label style={estiloLabel}>Unidad</label>
-                <select value={form.unidad} onChange={e => set('unidad', e.target.value)} style={estiloInput}>
-                  <option value="">Seleccionar...</option>
-                  {(form.unidad && !UNIDADES.includes(form.unidad) ? [form.unidad, ...UNIDADES] : UNIDADES).map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
+                <input value={form.unidad} onChange={e => set('unidad', e.target.value)} list="lista-unidades-pedido"
+                  autoComplete="off" placeholder="Escribe para buscar" style={estiloInput} />
+                <datalist id="lista-unidades-pedido">
+                  {UNIDADES.map(u => <option key={u} value={u} />)}
+                </datalist>
               </div>
             </div>
 

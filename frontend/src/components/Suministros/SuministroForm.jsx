@@ -28,7 +28,7 @@ const FRECUENCIAS = [
   'Según consumo',
 ];
 
-export const UNIDADES = [
+const UNIDADES_BASE = [
   'UNIDAD', 'PAR', 'DOCENA', 'CIENTO', 'MILLAR', 'PIEZA', 'JUEGO', 'KIT', 'SET',
   'CAJA', 'PAQUETE', 'BOLSA', 'SACO', 'BULTO', 'FARDO', 'PALET',
   'ROLLO', 'BOBINA', 'CINTA', 'LÁMINA', 'PLANCHA', 'HOJA', 'RESMA', 'BARRA', 'TUBO', 'CABILLA', 'VARILLA',
@@ -38,6 +38,8 @@ export const UNIDADES = [
   'METRO CUADRADO', 'METRO CÚBICO', 'PIE CUADRADO', 'PIE CÚBICO',
   'TABLETA', 'PASTILLA', 'SOBRE', 'SERVICIO', 'HORA', 'DÍA', 'MES',
 ];
+
+export const UNIDADES = [...UNIDADES_BASE].sort((a, b) => a.localeCompare(b, 'es'));
 
 const DOCUMENTOS = ['Nota de Entrega', 'Factura', 'Otro'];
 const MONEDAS = ['Bs', 'Dólares', 'Euros', 'USDT'];
@@ -86,7 +88,7 @@ export default function SuministroForm({ suministro, onClose }) {
       .catch(() => {});
   }, []);
 
-  const CAMPOS_TEXTO = ['nombre', 'proveedor', 'notas', 'documento_otro'];
+  const CAMPOS_TEXTO = ['nombre', 'proveedor', 'notas', 'documento_otro', 'unidad'];
 
   const set = (k, v) => setForm(f => {
     const nf = { ...f, [k]: CAMPOS_TEXTO.includes(k) ? v.toUpperCase() : v };
@@ -124,8 +126,6 @@ export default function SuministroForm({ suministro, onClose }) {
   const ivaDivisa = hayPrecio ? redondear(num(form.ultimo_precio) * pct / 100) : null;
   const totalDivisa = hayPrecio ? redondear(num(form.ultimo_precio) + ivaDivisa) : null;
 
-  const unidades = form.unidad && !UNIDADES.includes(form.unidad) ? [form.unidad, ...UNIDADES] : UNIDADES;
-
   const guardarIvaDefecto = async () => {
     setError(''); setAviso('');
     try {
@@ -140,6 +140,10 @@ export default function SuministroForm({ suministro, onClose }) {
   const guardar = async () => {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
     if (!form.categoria) { setError('Selecciona una categoría'); return; }
+    if (form.unidad && !UNIDADES.includes(form.unidad) && !(suministro && suministro.unidad === form.unidad)) {
+      setError('Elige una unidad de la lista');
+      return;
+    }
     if (form.tipo_documento === 'Otro' && !(form.documento_otro || '').trim()) {
       setError('Especifique el tipo de documento');
       return;
@@ -247,7 +251,12 @@ export default function SuministroForm({ suministro, onClose }) {
           </div>
 
           {lista('Categoría', 'categoria', CATEGORIAS, true)}
-          {lista('Unidad de medida', 'unidad', unidades)}
+          <div>
+            {campo('Unidad de medida', 'unidad', 'text', false, { list: 'lista-unidades', autoComplete: 'off', placeholder: 'Escribe para buscar' })}
+            <datalist id="lista-unidades">
+              {UNIDADES.map(u => <option key={u} value={u} />)}
+            </datalist>
+          </div>
 
           {lista('Frecuencia de compra', 'frecuencia_compra', FRECUENCIAS)}
           {campo('Último proveedor', 'proveedor')}
