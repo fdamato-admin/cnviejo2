@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import SuministroForm from './SuministroForm';
 import PedidosSuministros from './PedidosSuministros';
+import ImpactoRecibo from './ImpactoRecibo';
 
 const CATEGORIAS = [
   'Químicos de piscina', 'Equipos de piscina', 'Jardinería y áreas verdes',
@@ -63,10 +64,11 @@ export default function Suministros() {
       <div style={{ display: 'flex', gap: 4, padding: '0 32px', borderBottom: '1px solid #eee', maxWidth: 1300, margin: '0 auto' }}>
         {pestana('compras', 'Compras')}
         {pestana('pedidos', 'Pedido de Suministros')}
+        {pestana('impacto', 'Impacto Gastos en el Recibo')}
       </div>
-      {vista === 'compras'
-        ? <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />
-        : <PedidosSuministros onComprar={comprarPedido} />}
+      {vista === 'compras' && <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />}
+      {vista === 'pedidos' && <PedidosSuministros onComprar={comprarPedido} />}
+      {vista === 'impacto' && <ImpactoRecibo />}
     </div>
   );
 }
