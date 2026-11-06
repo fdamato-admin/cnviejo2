@@ -54,6 +54,8 @@ const vacio = {
   proveedor: '',
   ultima_fecha_compra: '',
   moneda_pago: '',
+  cantidad: '',
+  estado_recepcion: 'Por recibir',
   ultimo_precio: '',
   tasa_cambio: '',
   precio_bs: '',
@@ -72,8 +74,8 @@ const estiloInput = { width: '100%', padding: '8px 12px', border: '1px solid #dd
 const estiloLabel = { display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 };
 const estiloCalculado = { ...estiloInput, background: '#f5f7fa', color: '#333', fontWeight: 600 };
 
-export default function SuministroForm({ suministro, onClose }) {
-  const [form, setForm] = useState(suministro ? { ...vacio, ...suministro } : { ...vacio });
+export default function SuministroForm({ suministro, inicial, pedidoId, onClose }) {
+  const [form, setForm] = useState(suministro ? { ...vacio, ...suministro } : { ...vacio, ...(inicial || {}) });
   const [ivaDefecto, setIvaDefecto] = useState(16);
   const [existentes, setExistentes] = useState([]);
   const [guardando, setGuardando] = useState(false);
@@ -88,6 +90,21 @@ export default function SuministroForm({ suministro, onClose }) {
       .then(r => setExistentes(Array.isArray(r.data) ? r.data : []))
       .catch(() => {});
   }, []);
+
+  // Si viene de un pedido y el suministro ya existe, se traen sus datos fijos
+  useEffect(() => {
+    if (suministro || !inicial || !inicial.nombre) return;
+    const m = existentes.find(x => (x.nombre || '').trim().toUpperCase() === inicial.nombre.trim().toUpperCase());
+    if (!m) return;
+    setForm(f => {
+      const nf = { ...f };
+      ['categoria', 'unidad', 'frecuencia_compra', 'proveedor'].forEach(c => {
+        if (vacioONulo(nf[c]) && !vacioONulo(m[c])) nf[c] = m[c];
+      });
+      return nf;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existentes]);
 
   const CAMPOS_TEXTO = ['nombre', 'proveedor', 'notas', 'documento_otro', 'unidad'];
 
@@ -158,6 +175,8 @@ export default function SuministroForm({ suministro, onClose }) {
         frecuencia_compra: form.frecuencia_compra || null,
         ultima_fecha_compra: form.ultima_fecha_compra || null,
         moneda_pago: form.moneda_pago || null,
+        cantidad: aNum(form.cantidad),
+        estado_recepcion: form.estado_recepcion || null,
         ultimo_precio: aNum(form.ultimo_precio),
         iva_porcentaje: pct,
         tasa_cambio: esBs ? aNum(form.tasa_cambio) : null,
@@ -174,6 +193,13 @@ export default function SuministroForm({ suministro, onClose }) {
         await API.put(`/suministros/${destino.id}`, payload);
       } else {
         await API.post('/suministros/', payload);
+      }
+      if (pedidoId) {
+        try {
+          await API.put(`/pedidos-suministros/${pedidoId}`, { estado: 'Comprado' });
+        } catch (err) {
+          console.error(err);
+        }
       }
       onClose();
     } catch (e) {
@@ -262,6 +288,9 @@ export default function SuministroForm({ suministro, onClose }) {
 
           {campo('Fecha de compra', 'ultima_fecha_compra', 'date')}
           {lista('Pagado en', 'moneda_pago', MONEDAS)}
+
+          {campo('Cantidad comprada', 'cantidad', 'number', false, { step: '0.01', min: '0' })}
+          {lista('Estado de recepción', 'estado_recepcion', ['Por recibir', 'Recibido'])}
 
           {campo(etiquetaPrecio, 'ultimo_precio', 'number', false, { step: '0.01', min: '0' })}
 

@@ -4,7 +4,8 @@ import { UNIDADES } from './SuministroForm';
 import UnidadCombo from './UnidadCombo';
 
 const ESTADOS = ['Pendiente', 'Comprado'];
-const vacio = { nombre: '', cantidad: '', unidad: '', nota: '' };
+const hoy = () => new Date().toLocaleDateString('en-CA');
+const vacio = { nombre: '', cantidad: '', unidad: '', nota: '', fecha_pedido: '' };
 
 const estiloInput = { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
 const estiloLabel = { display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 };
@@ -16,7 +17,7 @@ function formatFecha(fecha) {
   return `${d}/${m}/${y}`;
 }
 
-export default function PedidosSuministros() {
+export default function PedidosSuministros({ onComprar }) {
   const [pedidos, setPedidos] = useState([]);
   const [existentes, setExistentes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -51,11 +52,11 @@ export default function PedidosSuministros() {
   }, []);
 
   const abrirNuevo = () => {
-    setEditando(null); setForm({ ...vacio }); setError(''); setAviso(''); setModal(true);
+    setEditando(null); setForm({ ...vacio, fecha_pedido: hoy() }); setError(''); setAviso(''); setModal(true);
   };
   const abrirEditar = (p) => {
     setEditando(p);
-    setForm({ nombre: p.nombre || '', cantidad: p.cantidad ?? '', unidad: p.unidad || '', nota: p.nota || '' });
+    setForm({ nombre: p.nombre || '', cantidad: p.cantidad ?? '', unidad: p.unidad || '', nota: p.nota || '', fecha_pedido: p.fecha_pedido || hoy() });
     setError(''); setAviso(''); setModal(true);
   };
 
@@ -78,7 +79,7 @@ export default function PedidosSuministros() {
     }
     setGuardando(true); setError(''); setAviso('');
     try {
-      const payload = { nombre: form.nombre.trim(), cantidad: cant, unidad: form.unidad || null, nota: form.nota || null };
+      const payload = { nombre: form.nombre.trim(), cantidad: cant, unidad: form.unidad || null, nota: form.nota || null, fecha_pedido: form.fecha_pedido || hoy() };
       if (editando) {
         await API.put(`/pedidos-suministros/${editando.id}`, payload);
       } else {
@@ -88,7 +89,7 @@ export default function PedidosSuministros() {
       if (cerrar || editando) {
         setModal(false);
       } else {
-        setForm({ ...vacio });
+        setForm({ ...vacio, fecha_pedido: form.fecha_pedido || hoy() });
         setAviso('Agregado. Puedes cargar otro.');
       }
     } catch (e) {
@@ -147,7 +148,7 @@ export default function PedidosSuministros() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
-                {['Fecha', 'Suministro', 'Cantidad', 'Unidad', 'Nota', 'Estado', ''].map(h => (
+                {['Fecha de solicitud', 'Suministro', 'Cantidad', 'Unidad', 'Nota', 'Estado', ''].map(h => (
                   <th key={h || 'acc'} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -168,7 +169,7 @@ export default function PedidosSuministros() {
                     }}>{p.estado}</span>
                   </td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                    <button style={{ ...btn, marginRight: 8 }} onClick={() => cambiarEstado(p)}>
+                    <button style={{ ...btn, marginRight: 8 }} onClick={() => ((p.estado === 'Pendiente' && onComprar) ? onComprar(p) : cambiarEstado(p))}>
                       {p.estado === 'Pendiente' ? 'Marcar comprado' : 'Volver a pendiente'}
                     </button>
                     <button style={{ ...btn, marginRight: 8 }} onClick={() => abrirEditar(p)}>Editar</button>
@@ -212,6 +213,10 @@ export default function PedidosSuministros() {
             <div style={{ marginBottom: 16 }}>
               <label style={estiloLabel}>Nota</label>
               <textarea value={form.nota} onChange={e => set('nota', e.target.value)} rows={3} style={{ ...estiloInput, resize: 'vertical' }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={estiloLabel}>Fecha de solicitud</label>
+              <input type="date" value={form.fecha_pedido || ''} onChange={e => set('fecha_pedido', e.target.value)} style={estiloInput} />
             </div>
 
             {aviso && <p style={{ color: '#1a7a3c', fontSize: 13, marginBottom: 16 }}>{aviso}</p>}

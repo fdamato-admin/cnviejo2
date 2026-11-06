@@ -46,6 +46,8 @@ function formatDocumento(s) {
 
 export default function Suministros() {
   const [vista, setVista] = useState('compras');
+  const [pedidoACompra, setPedidoACompra] = useState(null);
+  const comprarPedido = (p) => { setPedidoACompra(p); setVista('compras'); };
   const pestana = (id, texto) => (
     <button onClick={() => setVista(id)}
       style={{
@@ -62,12 +64,14 @@ export default function Suministros() {
         {pestana('compras', 'Compras')}
         {pestana('pedidos', 'Pedido de Suministros')}
       </div>
-      {vista === 'compras' ? <Compras /> : <PedidosSuministros />}
+      {vista === 'compras'
+        ? <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />
+        : <PedidosSuministros onComprar={comprarPedido} />}
     </div>
   );
 }
 
-function Compras() {
+function Compras({ pedido, onPedidoUsado }) {
   const [suministros, setSuministros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [buscar, setBuscar] = useState('');
@@ -115,7 +119,25 @@ function Compras() {
 
   const abrirNuevo = () => { setSeleccionado(null); setModalAbierto(true); };
   const abrirEditar = (s) => { setSeleccionado(s); setModalAbierto(true); };
-  const cerrarModal = () => { setModalAbierto(false); setSeleccionado(null); cargar(); };
+  const cerrarModal = () => {
+    setModalAbierto(false);
+    setSeleccionado(null);
+    if (onPedidoUsado) onPedidoUsado();
+    cargar();
+  };
+
+  useEffect(() => {
+    if (pedido) { setSeleccionado(null); setModalAbierto(true); }
+  }, [pedido]);
+
+  const marcarRecibido = async (s) => {
+    try {
+      await API.put(`/suministros/${s.id}`, { estado_recepcion: 'Recibido' });
+      cargar();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const eliminar = async (id) => {
     try {
@@ -176,6 +198,7 @@ function Compras() {
                   { t: 'Nombre', k: 'nombre' },
                   { t: 'Categoría', k: 'categoria' },
                   { t: 'Unidad' },
+                  { t: 'Cantidad' },
                   { t: 'Frecuencia' },
                   { t: 'Último proveedor' },
                   { t: 'Fecha de compra', k: 'ultima_fecha_compra' },
@@ -183,6 +206,7 @@ function Compras() {
                   { t: 'Precio' },
                   { t: 'Total' },
                   { t: 'Documento' },
+                  { t: 'Recepción' },
                   { t: '' },
                 ].map(h => (
                   <th key={h.t || 'acciones'}
@@ -204,6 +228,7 @@ function Compras() {
                     </span>
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.unidad || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.cantidad ?? '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.frecuencia_compra || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(s.ultima_fecha_compra)}</td>
@@ -216,6 +241,21 @@ function Compras() {
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatDocumento(s)}</td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    {s.estado_recepcion ? (
+                      <span style={{
+                        background: s.estado_recepcion === 'Recibido' ? '#e8f6ec' : '#fff4e0',
+                        color: s.estado_recepcion === 'Recibido' ? '#1a7a3c' : '#a15c00',
+                        padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                      }}>{s.estado_recepcion}</span>
+                    ) : '—'}
+                  </td>
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    {s.estado_recepcion === 'Por recibir' && (
+                      <button onClick={() => marcarRecibido(s)}
+                        style={{ marginRight: 8, padding: '5px 12px', border: '1px solid #bfe3c9', borderRadius: 6, background: '#f3fbf5', fontSize: 13, cursor: 'pointer', color: '#1a7a3c' }}>
+                        Marcar recibido
+                      </button>
+                    )}
                     <button onClick={() => abrirEditar(s)}
                       style={{ marginRight: 8, padding: '5px 12px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer', color: '#444' }}>
                       Editar
@@ -233,7 +273,14 @@ function Compras() {
       )}
 
       {/* Modal formulario */}
-      {modalAbierto && <SuministroForm suministro={seleccionado} onClose={cerrarModal} />}
+      {modalAbierto && (
+        <SuministroForm
+          suministro={seleccionado}
+          inicial={pedido && !seleccionado ? { nombre: pedido.nombre, cantidad: pedido.cantidad, unidad: pedido.unidad || '' } : null}
+          pedidoId={pedido && !seleccionado ? pedido.id : null}
+          onClose={cerrarModal}
+        />
+      )}
 
       {/* Confirm eliminar */}
       {confirmEliminar && (
