@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from ..database import get_db
-from ..models import Suministro
+from ..models import Suministro, Configuracion
 from ..schemas import SuministroCreate, SuministroUpdate, SuministroOut
 
 router = APIRouter(prefix="/suministros", tags=["Suministros"])
@@ -58,3 +58,26 @@ def eliminar_suministro(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Suministro no encontrado")
     db.delete(s)
     db.commit()
+
+
+@router.get("/config/iva")
+def obtener_iva(db: Session = Depends(get_db)):
+    c = db.query(Configuracion).filter(Configuracion.clave == "iva_porcentaje").first()
+    return {"iva_porcentaje": float(c.valor) if c else 16.0}
+
+
+@router.put("/config/iva")
+def guardar_iva(data: dict, db: Session = Depends(get_db)):
+    try:
+        valor = float(data.get("iva_porcentaje"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="IVA invalido")
+    if valor < 0 or valor > 100:
+        raise HTTPException(status_code=400, detail="IVA fuera de rango")
+    c = db.query(Configuracion).filter(Configuracion.clave == "iva_porcentaje").first()
+    if c:
+        c.valor = str(valor)
+    else:
+        db.add(Configuracion(clave="iva_porcentaje", valor=str(valor)))
+    db.commit()
+    return {"iva_porcentaje": valor}

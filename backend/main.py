@@ -15,6 +15,10 @@ def _migrar_suministros():
         "documento_otro": "VARCHAR(150)",
         "iva_bs": "FLOAT",
         "monto_total_bs": "FLOAT",
+        "moneda_pago": "VARCHAR(10)",
+        "iva_porcentaje": "FLOAT",
+        "iva_divisa": "FLOAT",
+        "monto_total_divisa": "FLOAT",
     }
     with engine.begin() as con:
         cols = [r[1] for r in con.execute(text("PRAGMA table_info(suministros)"))]
@@ -32,6 +36,8 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(proveedores.router, prefix="/api")
 app.include_router(trabajos.router, prefix="/api")
 app.include_router(suministros.router, prefix="/api")
+from app.api import pedidos_suministros
+app.include_router(pedidos_suministros.router, prefix="/api")
 app.include_router(respaldos.router, prefix="/api")
 
 @app.on_event("startup")

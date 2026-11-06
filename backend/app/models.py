@@ -144,6 +144,31 @@ class Suministro(Base):
     documento_otro = Column(String(150), nullable=True)
     iva_bs = Column(Float, nullable=True)
     monto_total_bs = Column(Float, nullable=True)
+    moneda_pago = Column(String(10), nullable=True)
+    iva_porcentaje = Column(Float, nullable=True)
+    iva_divisa = Column(Float, nullable=True)
+    monto_total_divisa = Column(Float, nullable=True)
     notas = Column(Text, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Configuracion(Base):
+    __tablename__ = "configuracion"
+    clave = Column(String(50), primary_key=True)
+    valor = Column(String(100), nullable=False)
+
+
+import datetime as _dt
+from sqlalchemy import Integer as _Int, Text as _Text, String as _Str, Date as _Date, Float as _Flt, Column as _Col
+
+
+class PedidoSuministro(Base):
+    __tablename__ = "pedidos_suministros"
+    id = _Col(_Int, primary_key=True, index=True)
+    nombre = _Col(_Str(200), nullable=False)
+    cantidad = _Col(_Flt, nullable=False)
+    unidad = _Col(_Str(50), nullable=True)
+    nota = _Col(_Text, nullable=True)
+    estado = _Col(_Str(20), nullable=False, default="Pendiente")
+    fecha_pedido = _Col(_Date, default=_dt.date.today)

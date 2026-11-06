@@ -159,6 +159,10 @@ class SuministroBase(BaseModel):
     documento_otro: Optional[str] = None
     iva_bs: Optional[float] = None
     monto_total_bs: Optional[float] = None
+    moneda_pago: Optional[str] = None
+    iva_porcentaje: Optional[float] = None
+    iva_divisa: Optional[float] = None
+    monto_total_divisa: Optional[float] = None
     notas: Optional[str] = None
 
 class SuministroCreate(SuministroBase): pass
@@ -172,3 +176,34 @@ class SuministroOut(SuministroBase):
     creado_en: datetime
     actualizado_en: Optional[datetime] = None
     class Config: from_attributes = True
+
+
+import datetime as _dtm
+from typing import Optional as _Opt
+from pydantic import BaseModel as _BM
+
+
+class PedidoSuministroBase(_BM):
+    nombre: str
+    cantidad: float
+    unidad: _Opt[str] = None
+    nota: _Opt[str] = None
+    estado: _Opt[str] = "Pendiente"
+
+
+class PedidoSuministroCreate(PedidoSuministroBase):
+    pass
+
+
+class PedidoSuministroUpdate(_BM):
+    nombre: _Opt[str] = None
+    cantidad: _Opt[float] = None
+    unidad: _Opt[str] = None
+    nota: _Opt[str] = None
+    estado: _Opt[str] = None
+
+
+class PedidoSuministroOut(PedidoSuministroBase):
+    id: int
+    fecha_pedido: _Opt[_dtm.date] = None
+    model_config = {"from_attributes": True}
