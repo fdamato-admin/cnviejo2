@@ -9,4 +9,5 @@ FROM node:20-alpine
 WORKDIR /app
 RUN npm install -g serve
 COPY --from=build /app/build ./build
-ENTRYPOINT ["sh","-c","exec serve -s build -l ${PORT:-3000}"]
+COPY serve.json ./serve.json
+ENTRYPOINT ["sh","-c","exec serve -s build -l ${PORT:-3000} -c ../serve.json"]
