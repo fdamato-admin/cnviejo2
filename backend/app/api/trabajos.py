@@ -122,10 +122,21 @@ def actualizar_cotizacion(cotizacion_id: int, data: CotizacionUpdate, db: Sessio
     db.refresh(cotizacion)
     return cotizacion
 
+
 @router.delete("/cotizaciones/{cotizacion_id}", status_code=204)
 def eliminar_cotizacion(cotizacion_id: int, db: Session = Depends(get_db)):
     cotizacion = db.query(Cotizacion).filter(Cotizacion.id == cotizacion_id).first()
     if not cotizacion:
         raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+    trabajo_id = cotizacion.trabajo_id
     db.delete(cotizacion)
+    db.flush()
+    trabajo = db.query(Trabajo).filter(Trabajo.id == trabajo_id).first()
+    if trabajo and trabajo.estado not in (EstadoTrabajo.aprobado, EstadoTrabajo.en_ejecucion, EstadoTrabajo.completado, EstadoTrabajo.cancelado):
+        restantes = db.query(Cotizacion).filter(Cotizacion.trabajo_id == trabajo_id).count()
+        if restantes == 0:
+            trabajo.estado = EstadoTrabajo.pendiente_cotizacion
+        else:
+            trabajo.estado = EstadoTrabajo.cotizaciones_recibidas
     db.commit()
+
