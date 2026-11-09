@@ -58,8 +58,9 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
       .finally(() => setCargando(false));
   };
 
-  const recargarTrabajo = () => {
-    API.get(`/trabajos/${trabajo.id}`).then(r => setTrabajo(r.data)).catch(() => {});
+  const recargarTrabajo = async () => {
+    const r = await API.get(`/trabajos/${trabajo.id}`);
+    setTrabajo(r.data);
   };
 
   useEffect(() => { cargar(); }, [trabajo.id]);
@@ -80,8 +81,8 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
   const eliminarCotizacion = async (id) => {
     if (!window.confirm('Eliminar esta cotizacion?')) return;
     await API.delete(`/trabajos/cotizaciones/${id}`);
+    await recargarTrabajo();
     cargar();
-    recargarTrabajo();
     onCambio && onCambio();
   };
 
@@ -271,7 +272,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
         </div>
       )}
 
-      {mostrarForm && <CotizacionForm trabajoId={trabajo.id} cotizacion={cotEditar} onClose={() => { setMostrarForm(false); setCotEditar(null); cargar(); recargarTrabajo(); onCambio && onCambio(); }} />}
+      {mostrarForm && <CotizacionForm trabajoId={trabajo.id} cotizacion={cotEditar} onClose={async () => { setMostrarForm(false); setCotEditar(null); await recargarTrabajo(); cargar(); onCambio && onCambio(); }} />}
     </div>
   );
 }
