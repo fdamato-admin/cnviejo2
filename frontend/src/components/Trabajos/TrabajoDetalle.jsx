@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../../api';
 import CotizacionForm from './CotizacionForm';
 
@@ -73,6 +73,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     }
     await API.put(`/trabajos/${trabajo.id}`, { estado: 'aprobado' });
     cargar();
+    recargarTrabajo();
     onCambio && onCambio();
   };
 
@@ -80,6 +81,8 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
     if (!window.confirm('Eliminar esta cotizacion?')) return;
     await API.delete(`/trabajos/cotizaciones/${id}`);
     cargar();
+    recargarTrabajo();
+    onCambio && onCambio();
   };
 
   const handleSubirDocumento = async (cotId, file) => {
@@ -268,7 +271,7 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
         </div>
       )}
 
-      {mostrarForm && <CotizacionForm trabajoId={trabajo.id} cotizacion={cotEditar} onClose={() => { setMostrarForm(false); setCotEditar(null); cargar(); }} />}
+      {mostrarForm && <CotizacionForm trabajoId={trabajo.id} cotizacion={cotEditar} onClose={() => { setMostrarForm(false); setCotEditar(null); cargar(); recargarTrabajo(); onCambio && onCambio(); }} />}
     </div>
   );
 }
