@@ -83,8 +83,8 @@ def agregar_cotizacion(trabajo_id: int, data: CotizacionCreate, db: Session = De
     data_dict["trabajo_id"] = trabajo_id
     cotizacion = Cotizacion(**data_dict)
     db.add(cotizacion)
-    if trabajo.estado == EstadoTrabajo.pendiente_cotizacion:
-        trabajo.estado = EstadoTrabajo.cotizaciones_recibidas
+    if trabajo.estado not in (EstadoTrabajo.aprobado, EstadoTrabajo.en_ejecucion, EstadoTrabajo.completado, EstadoTrabajo.cancelado):
+       trabajo.estado = EstadoTrabajo.cotizaciones_recibidas
     db.commit()
     db.refresh(cotizacion)
     return cotizacion
