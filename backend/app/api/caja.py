@@ -85,10 +85,12 @@ def registrar_movimiento(data: MovimientoIn, db: Session = Depends(get_db), usua
         raise HTTPException(400, f"Tipo desconocido: {data.tipo}")
     fecha_dt = None
     if data.fecha:
-        try:
-            fecha_dt = datetime.fromisoformat(data.fecha)
-        except Exception:
-            fecha_dt = None
+        for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+            try:
+                fecha_dt = datetime.strptime(data.fecha[:len(fmt)], fmt)
+                break
+            except Exception:
+                continue
     mov = MovimientoCaja(
         tipo=data.tipo,
         fecha=fecha_dt,
