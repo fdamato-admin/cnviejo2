@@ -11,7 +11,7 @@ const TIPO_CONFIG = {
 
 function fmt(fecha) {
   if (!fecha) return '-';
-  return new Date(fecha).toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-VE', { dateStyle: 'short' });
 }
 function usd(n) {
   if (n == null) return '-';
