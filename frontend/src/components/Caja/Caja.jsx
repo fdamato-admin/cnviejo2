@@ -9,9 +9,7 @@ const TIPO_CONFIG = {
   venta_usd:     { label: 'Venta USD (USD\u2192Bs)',  color: '#e65100', bg: '#fff3e0',  signo: '-' },
 };
 
-function fmt(fecha) {
-  if (!fecha) return '-';
-  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-VE', { dateStyle: 'short' });
+function fmt(fecha) { if (!fecha) return "-"; const s = fecha.length > 10 ? fecha : fecha + "T00:00:00"; const d = new Date(s); if (isNaN(d.getTime())) return fecha.slice(0,10); return d.toLocaleDateString("es-VE", { day: "2-digit", month: "2-digit", year: "numeric" }); });
 }
 function usd(n) {
   if (n == null) return '-';
@@ -246,3 +244,4 @@ const lbl = { display: 'block', fontSize: 11, color: '#888', marginBottom: 4 };
 const inp = { padding: '7px 10px', borderRadius: 7, border: '1px solid #ddd', fontSize: 13, width: 130 };
 const th  = { padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#555' };
 const td  = { padding: '10px 12px', verticalAlign: 'top' };
+
