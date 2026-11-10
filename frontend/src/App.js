@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import Login from './components/Login';
 import ProveedoresList from './components/Proveedores/ProveedoresList';
@@ -6,6 +6,7 @@ import Trabajos from './components/Trabajos/Trabajos';
 import Usuarios from './components/Usuarios/Usuarios';
 import Suministros from './components/Suministros/Suministros';
 import Respaldo from './components/Respaldo/Respaldo';
+import Auditoria from './components/Auditoria/Auditoria';
 
 const TABS = [
   { key: 'trabajos', label: 'Trabajos', modulo: 'trabajos' },
@@ -43,7 +44,18 @@ function AppInner() {
             Usuarios
           </button>
         )}
-        {puede('*', 'admin') && (<button onClick={() => setTab('respaldo')} style={{ padding: '16px 16px', background: 'none', border: 'none', color: tab === 'respaldo' ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: tab === 'respaldo' ? 600 : 400, fontSize: 14, cursor: 'pointer', borderBottom: tab === 'respaldo' ? '2px solid #fff' : '2px solid transparent' }}>Respaldo</button>)}
+        {puede('*', 'admin') && (
+          <button onClick={() => setTab('respaldo')}
+            style={{ padding: '16px 16px', background: 'none', border: 'none', color: tab === 'respaldo' ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: tab === 'respaldo' ? 600 : 400, fontSize: 14, cursor: 'pointer', borderBottom: tab === 'respaldo' ? '2px solid #fff' : '2px solid transparent' }}>
+            Respaldo
+          </button>
+        )}
+        {puede('*', 'admin') && (
+          <button onClick={() => setTab('auditoria')}
+            style={{ padding: '16px 16px', background: 'none', border: 'none', color: tab === 'auditoria' ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: tab === 'auditoria' ? 600 : 400, fontSize: 14, cursor: 'pointer', borderBottom: tab === 'auditoria' ? '2px solid #fff' : '2px solid transparent' }}>
+            Auditoria
+          </button>
+        )}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{usuario.nombre}</span>
           <button onClick={logout}
@@ -58,6 +70,7 @@ function AppInner() {
         {tab === 'suministros' && <Suministros />}
         {tab === 'usuarios' && <Usuarios />}
         {tab === 'respaldo' && <Respaldo />}
+        {tab === 'auditoria' && <Auditoria />}
       </main>
     </div>
   );

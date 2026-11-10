@@ -1,0 +1,2438 @@
+From b62669fd3c7eb7cc56b8f4b6025a69bad9a1821e Mon Sep 17 00:00:00 2001
+From: fdamato-admin <fdamato27@gmail.com>
+Date: Thu, 29 Oct 2026 02:13:49 +0000
+Subject: [PATCH 1/3] Autenticacion JWT con permisos por modulo
+
+- Modelos Usuario y Permiso con niveles admin/operador/consulta
+- Permisos por modulo independientes (proveedores, trabajos, cotizaciones, *)
+- Endpoints login, me, CRUD usuarios
+- Seed endpoint para crear primer admin
+- Frontend: pantalla login, AuthContext, modulo Usuarios
+- requirements: python-jose, passlib, python-multipart
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_019gnkJ7zAKXqzLMjeCW8Bef
+---
+ backend/app/api/auth.py                       | 114 +++++++++++++++
+ backend/app/auth.py                           |  61 ++++++++
+ backend/app/models.py                         |  30 ++++
+ backend/app/schemas.py                        |  46 +++++-
+ backend/main.py                               |   3 +-
+ backend/requirements.txt                      | Bin 2462 -> 218 bytes
+ frontend/src/App.js                           |  36 +++--
+ frontend/src/AuthContext.js                   |  64 +++++++++
+ frontend/src/components/Login.jsx             |  65 +++++++++
+ .../src/components/Usuarios/UsuarioForm.jsx   | 132 ++++++++++++++++++
+ frontend/src/components/Usuarios/Usuarios.jsx |  83 +++++++++++
+ 11 files changed, 624 insertions(+), 10 deletions(-)
+ create mode 100644 backend/app/api/auth.py
+ create mode 100644 backend/app/auth.py
+ create mode 100644 frontend/src/AuthContext.js
+ create mode 100644 frontend/src/components/Login.jsx
+ create mode 100644 frontend/src/components/Usuarios/UsuarioForm.jsx
+ create mode 100644 frontend/src/components/Usuarios/Usuarios.jsx
+
+diff --git a/backend/app/api/auth.py b/backend/app/api/auth.py
+new file mode 100644
+index 0000000..b5ca2fb
+--- /dev/null
++++ b/backend/app/api/auth.py
+@@ -0,0 +1,114 @@
++from fastapi import APIRouter, Depends, HTTPException
++from sqlalchemy.orm import Session
++from typing import List
++from ..database import get_db
++from ..models import Usuario, Permiso, NivelPermiso
++from ..schemas import UsuarioCreate, UsuarioUpdate, UsuarioOut, LoginIn, TokenOut
++from ..auth import hash_password, verify_password, create_token, get_current_user, require_permiso
++
++router = APIRouter(prefix="/auth", tags=["auth"])
++
++
++@router.post("/login", response_model=TokenOut)
++def login(data: LoginIn, db: Session = Depends(get_db)):
++    user = db.query(Usuario).filter(Usuario.email == data.email.lower(), Usuario.activo == True).first()
++    if not user or not verify_password(data.password, user.password_hash):
++        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
++    token = create_token({"sub": str(user.id)})
++    return {"access_token": token, "token_type": "bearer", "usuario": user}
++
++
++@router.get("/me", response_model=UsuarioOut)
++def me(usuario: Usuario = Depends(get_current_user)):
++    return usuario
++
++
++# ── Gestión de usuarios (solo admin global) ──────────────────────────────────
++
++@router.get("/usuarios", response_model=List[UsuarioOut])
++def listar_usuarios(
++    db: Session = Depends(get_db),
++    _: Usuario = Depends(require_permiso("*", NivelPermiso.admin))
++):
++    return db.query(Usuario).order_by(Usuario.nombre).all()
++
++
++@router.post("/usuarios", response_model=UsuarioOut, status_code=201)
++def crear_usuario(
++    data: UsuarioCreate,
++    db: Session = Depends(get_db),
++    _: Usuario = Depends(require_permiso("*", NivelPermiso.admin))
++):
++    if db.query(Usuario).filter(Usuario.email == data.email.lower()).first():
++        raise HTTPException(status_code=400, detail="Email ya registrado")
++    user = Usuario(
++        nombre=data.nombre.upper(),
++        email=data.email.lower(),
++        password_hash=hash_password(data.password)
++    )
++    db.add(user)
++    db.flush()
++    for p in data.permisos:
++        db.add(Permiso(usuario_id=user.id, modulo=p.modulo, nivel=p.nivel))
++    db.commit()
++    db.refresh(user)
++    return user
++
++
++@router.put("/usuarios/{uid}", response_model=UsuarioOut)
++def editar_usuario(
++    uid: int,
++    data: UsuarioUpdate,
++    db: Session = Depends(get_db),
++    _: Usuario = Depends(require_permiso("*", NivelPermiso.admin))
++):
++    user = db.query(Usuario).filter(Usuario.id == uid).first()
++    if not user:
++        raise HTTPException(status_code=404, detail="Usuario no encontrado")
++    if data.nombre is not None:
++        user.nombre = data.nombre.upper()
++    if data.email is not None:
++        user.email = data.email.lower()
++    if data.password is not None:
++        user.password_hash = hash_password(data.password)
++    if data.activo is not None:
++        user.activo = data.activo
++    if data.permisos is not None:
++        db.query(Permiso).filter(Permiso.usuario_id == uid).delete()
++        for p in data.permisos:
++            db.add(Permiso(usuario_id=uid, modulo=p.modulo, nivel=p.nivel))
++    db.commit()
++    db.refresh(user)
++    return user
++
++
++@router.delete("/usuarios/{uid}", status_code=204)
++def eliminar_usuario(
++    uid: int,
++    db: Session = Depends(get_db),
++    current: Usuario = Depends(require_permiso("*", NivelPermiso.admin))
++):
++    if uid == current.id:
++        raise HTTPException(status_code=400, detail="No puedes eliminar tu propio usuario")
++    user = db.query(Usuario).filter(Usuario.id == uid).first()
++    if not user:
++        raise HTTPException(status_code=404, detail="No encontrado")
++    db.delete(user)
++    db.commit()
++
++
++@router.post("/seed", status_code=201)
++def seed_admin(db: Session = Depends(get_db)):
++    """Crea el primer usuario admin. Solo funciona si no hay usuarios."""
++    if db.query(Usuario).count() > 0:
++        raise HTTPException(status_code=400, detail="Ya existen usuarios")
++    user = Usuario(
++        nombre="ADMINISTRADOR",
++        email="admin@cnpuebloviejo2.com",
++        password_hash=hash_password("admin2024")
++    )
++    db.add(user)
++    db.flush()
++    db.add(Permiso(usuario_id=user.id, modulo="*", nivel=NivelPermiso.admin))
++    db.commit()
++    return {"msg": "Admin creado", "email": "admin@cnpuebloviejo2.com", "password": "admin2024"}
+diff --git a/backend/app/auth.py b/backend/app/auth.py
+new file mode 100644
+index 0000000..9bf402c
+--- /dev/null
++++ b/backend/app/auth.py
+@@ -0,0 +1,61 @@
++from datetime import datetime, timedelta
++from typing import Optional
++from jose import JWTError, jwt
++from passlib.context import CryptContext
++from fastapi import Depends, HTTPException, status
++from fastapi.security import OAuth2PasswordBearer
++from sqlalchemy.orm import Session
++from .database import get_db
++from .models import Usuario, Permiso, NivelPermiso
++
++SECRET_KEY = "cnpuebloviejo2-secret-key-2024"
++ALGORITHM = "HS256"
++ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 horas
++
++pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
++oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
++
++
++def hash_password(password: str) -> str:
++    return pwd_context.hash(password)
++
++def verify_password(plain: str, hashed: str) -> bool:
++    return pwd_context.verify(plain, hashed)
++
++def create_token(data: dict) -> str:
++    payload = data.copy()
++    payload["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
++    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
++
++def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Usuario:
++    exc = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
++    try:
++        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
++        user_id: int = payload.get("sub")
++        if user_id is None:
++            raise exc
++    except JWTError:
++        raise exc
++    user = db.query(Usuario).filter(Usuario.id == int(user_id), Usuario.activo == True).first()
++    if not user:
++        raise exc
++    return user
++
++def require_permiso(modulo: str, nivel_minimo: NivelPermiso):
++    """Dependency factory — verifica que el usuario tenga al menos nivel_minimo en el módulo."""
++    orden = {NivelPermiso.consulta: 0, NivelPermiso.operador: 1, NivelPermiso.admin: 2}
++
++    def dep(usuario: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
++        # Si tiene admin global (permiso modulo="*") pasa siempre
++        perm = db.query(Permiso).filter(
++            Permiso.usuario_id == usuario.id,
++            Permiso.modulo.in_([modulo, "*"])
++        ).all()
++        if not perm:
++            raise HTTPException(status_code=403, detail=f"Sin acceso al módulo {modulo}")
++        nivel_usuario = max(orden[p.nivel] for p in perm)
++        if nivel_usuario < orden[nivel_minimo]:
++            raise HTTPException(status_code=403, detail="Permisos insuficientes")
++        return usuario
++
++    return dep
+diff --git a/backend/app/models.py b/backend/app/models.py
+index 7db8eda..a4c6a47 100644
+--- a/backend/app/models.py
++++ b/backend/app/models.py
+@@ -4,6 +4,36 @@ from sqlalchemy.sql import func
+ from .database import Base
+ import enum
+ 
++
++# ── Usuarios y Permisos ─────────────────────────────────────────────────────
++
++class NivelPermiso(str, enum.Enum):
++    admin = "admin"         # crear, editar, eliminar
++    operador = "operador"   # crear, editar — no eliminar
++    consulta = "consulta"   # solo ver
++
++class Usuario(Base):
++    __tablename__ = "usuarios"
++
++    id = Column(Integer, primary_key=True, index=True)
++    nombre = Column(String(100), nullable=False)
++    email = Column(String(120), unique=True, nullable=False, index=True)
++    password_hash = Column(String(200), nullable=False)
++    activo = Column(Boolean, default=True)
++    creado_en = Column(DateTime(timezone=True), server_default=func.now())
++
++    permisos = relationship("Permiso", back_populates="usuario", cascade="all, delete-orphan")
++
++class Permiso(Base):
++    __tablename__ = "permisos"
++
++    id = Column(Integer, primary_key=True, index=True)
++    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
++    modulo = Column(String(50), nullable=False)   # proveedores | trabajos | cotizaciones
++    nivel = Column(Enum(NivelPermiso), nullable=False)
++
++    usuario = relationship("Usuario", back_populates="permisos")
++
+ class TipoProveedor(str, enum.Enum):
+     servicio = "servicio"      # mano de obra, técnicos
+     insumo = "insumo"          # materiales, equipos, químicos
+diff --git a/backend/app/schemas.py b/backend/app/schemas.py
+index 228cca9..7307d43 100644
+--- a/backend/app/schemas.py
++++ b/backend/app/schemas.py
+@@ -2,7 +2,51 @@ from pydantic import BaseModel, EmailStr
+ from typing import Optional, List
+ from decimal import Decimal
+ from datetime import datetime
+-from .models import TipoProveedor, EstadoProveedor, TipoTrabajo, PrioridadTrabajo, EstadoTrabajo, EstadoCotizacion
++from .models import TipoProveedor, EstadoProveedor, TipoTrabajo, PrioridadTrabajo, EstadoTrabajo, EstadoCotizacion, NivelPermiso
++
++
++# ── Auth ─────────────────────────────────────────────────────────────────────
++
++class PermisoIn(BaseModel):
++    modulo: str
++    nivel: NivelPermiso
++
++class PermisoOut(PermisoIn):
++    id: int
++    class Config:
++        from_attributes = True
++
++class UsuarioCreate(BaseModel):
++    nombre: str
++    email: str
++    password: str
++    permisos: List[PermisoIn] = []
++
++class UsuarioUpdate(BaseModel):
++    nombre: Optional[str] = None
++    email: Optional[str] = None
++    password: Optional[str] = None
++    activo: Optional[bool] = None
++    permisos: Optional[List[PermisoIn]] = None
++
++class UsuarioOut(BaseModel):
++    id: int
++    nombre: str
++    email: str
++    activo: bool
++    creado_en: datetime
++    permisos: List[PermisoOut] = []
++    class Config:
++        from_attributes = True
++
++class LoginIn(BaseModel):
++    email: str
++    password: str
++
++class TokenOut(BaseModel):
++    access_token: str
++    token_type: str = "bearer"
++    usuario: UsuarioOut
+ 
+ class ProveedorBase(BaseModel):
+     nombre: str
+diff --git a/backend/main.py b/backend/main.py
+index 8baed66..7277e2f 100644
+--- a/backend/main.py
++++ b/backend/main.py
+@@ -1,7 +1,7 @@
+ from fastapi import FastAPI
+ from fastapi.middleware.cors import CORSMiddleware
+ from app.database import Base, engine
+-from app.api import proveedores, trabajos
++from app.api import proveedores, trabajos, auth
+ 
+ Base.metadata.create_all(bind=engine)
+ 
+@@ -19,6 +19,7 @@ app.add_middleware(
+     allow_headers=["*"],
+ )
+ 
++app.include_router(auth.router, prefix="/api")
+ app.include_router(proveedores.router, prefix="/api")
+ app.include_router(trabajos.router, prefix="/api")
+ 
+diff --git a/backend/requirements.txt b/backend/requirements.txt
+index b1949d4e2e335bb67b478f05d7d6cce87ee06b78..ec56ecb8db480f05bdaddaa6ae9b293f64b55320 100644
+GIT binary patch
+literal 218
+zcmYL@%L>CF5JmU?O9zdG;KDBnS&WY+7Nb)&0sp=jDBYgJ;ocY4h7`2sAcO$U&MVkl
+z(o!2HhsCW!O$s=xpNP@!{^(jyz(I0G-C=6M4lsjY)Z3oZ!{z4FrL_P)VC^>3Ha$#8
+zSngPXVi^5lMk+wafBVkWFSc}Qc`HbJU$vGXfiuEdV=#-k?K;94p1;lGj4cqBHvV!@
+F><b3RMvnjh
+
+literal 2462
+zcmZ{mL2uhe5QV>Uf&LT;k>sSwA%|RAAaH;dITSq^ltjylD3T$m*z%8Wi}z-iWYYQ|
+z3DC^Wym|9xcK`XiprYi=mLogf^PUw;*1TfLil6xjc?=XB>1=<)($-hWT2s^5W1wWu
+zf;~-&r6~H`yy!b{rKO~IZ2A7;Gm*LG%8|yl8zb7xtOEmGI=SYx^C+LrZmBp@bD~VR
+zRoA=GzN28r10@3u4ONPx>eeiI<0w0y9yoH((I~{sdh}9OWmBZWSQKwzMmo;s?#T0q
+zLFiRS@Ub(-9VbVA%hL8>eP>J!9fjklGr?rWc27ZX-rIyt_7xkW+ZflcRQ8Gt$}Sdu
+zv@N)$;b6XU9`W#Bzt8-^Egz^7cW16Xks}9oMH<+%wN3Q~vb8b&X6x@<8F-+f{w~5z
+zV*Wr!Nl9&e4x^8{936gO#mfIj^w6cc@nB`NKXg`JQ~!_bsVT;|ilwtc-m|Bm=HR|H
+zTt<zBHX{E=^Yw*-^(;#6&KG*u){jg@F0m2%i75Z)x1je-?2_)JRcTOM#hio+#f2&g
+z<P}exsf<NjsMC?-69uO<Mfz75qPMbioVd{PnSy)Du@><aUgD|a(HhTlq8VAuX0_(R
+znKtP`)~HmRww|>UMbg;8Ip!?Lqc-cgKIP8&rSFQ0hDV=VrR=%#x&6*Ft$EG6Omh_s
+zwT>}RC6r=G9EL7iI`6TDEthmYra(wy&Q+hdkY`|7+ZqatTCYhx>R4>l;7U<q?iD2z
+z7Cv{LcIjQ1gF9uOdza&$$U4q7U9D6hn)ZmgoU5AVOq*FsD!DjwXhr#AE|#=3-YKCQ
+z;mk9dxBAn_tIoaTryMokzVn@`8F)^WYL`wO&`$V^4}9X*c5yJNQ2a=r`mH@1n$Wzj
+zHZv{C<0}{6Dw^iZ>c*I(lN~L4dKRN*Ba^<Ps-EMl+PT(y&fdwbBgaO{e803IgDv&+
+zoplnMyGz?md}X~(b1NU!q8mWBS!_YsU#G1q#Rb>8&EygLIJQDokZ!oV8C2iO-=PoL
+zI#0N6ZDGh$5&eq$SvTo{g@5yI${Q(nV4C;&nLA3J5=JpP?J)VT5_?g{bJAyQ%4x^N
+z7P^=%@vvp%tl~5#ROc^z^Tb6x6DrMrbo9}$nBcTey3kaLlVC$0gEzL=2z6x@PBFqm
+tF9N-tLSO1i#1fWAO18cMbi3<KkiGP}iF*FDmQQ{iTv9GYP^7nx@-NOzVAB8q
+
+diff --git a/frontend/src/App.js b/frontend/src/App.js
+index 95432d3..f03579e 100644
+--- a/frontend/src/App.js
++++ b/frontend/src/App.js
+@@ -1,22 +1,29 @@
+ import React, { useState } from 'react';
++import { AuthProvider, useAuth } from './AuthContext';
++import Login from './components/Login';
+ import ProveedoresList from './components/Proveedores/ProveedoresList';
+ import Trabajos from './components/Trabajos/Trabajos';
++import Usuarios from './components/Usuarios/Usuarios';
+ 
+-const MODULOS = [
+-  { id: 'trabajos', label: '🔧 Trabajos' },
+-  { id: 'proveedores', label: '🏢 Proveedores' },
+-];
+-
+-function App() {
++function AppInner() {
++  const { usuario, logout, puede } = useAuth();
+   const [modulo, setModulo] = useState('trabajos');
+ 
++  if (!usuario) return <Login />;
++
++  const MODULOS = [
++    { id: 'trabajos', label: '🔧 Trabajos', visible: puede('trabajos', 'ver') },
++    { id: 'proveedores', label: '🏢 Proveedores', visible: puede('proveedores', 'ver') },
++    { id: 'usuarios', label: '👤 Usuarios', visible: puede('*', 'admin') },
++  ].filter(m => m.visible);
++
+   return (
+     <div style={{ minHeight: '100vh', background: '#f5f5f3' }}>
+       <nav style={{ background: '#1a3a5c', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+         <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, fontFamily: 'system-ui, sans-serif' }}>
+           CN Pueblo Viejo 2 · Gestión
+         </span>
+-        <div style={{ display: 'flex', gap: 4 }}>
++        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+           {MODULOS.map(m => (
+             <button key={m.id} onClick={() => setModulo(m.id)}
+               style={{
+@@ -28,13 +35,26 @@ function App() {
+               {m.label}
+             </button>
+           ))}
++          <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)', margin: '0 8px' }} />
++          <span style={{ color: '#8ab4d4', fontSize: 12, marginRight: 8 }}>{usuario.nombre}</span>
++          <button onClick={logout}
++            style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, cursor: 'pointer', background: 'transparent', color: '#8ab4d4' }}>
++            Salir
++          </button>
+         </div>
+       </nav>
+ 
+       {modulo === 'trabajos' && <Trabajos />}
+       {modulo === 'proveedores' && <ProveedoresList />}
++      {modulo === 'usuarios' && <Usuarios />}
+     </div>
+   );
+ }
+ 
+-export default App;
++export default function App() {
++  return (
++    <AuthProvider>
++      <AppInner />
++    </AuthProvider>
++  );
++}
+diff --git a/frontend/src/AuthContext.js b/frontend/src/AuthContext.js
+new file mode 100644
+index 0000000..5f83f31
+--- /dev/null
++++ b/frontend/src/AuthContext.js
+@@ -0,0 +1,64 @@
++import React, { createContext, useContext, useState, useEffect } from 'react';
++import API from './api';
++
++const AuthContext = createContext(null);
++
++export function AuthProvider({ children }) {
++  const [usuario, setUsuario] = useState(null);
++  const [cargando, setCargando] = useState(true);
++
++  useEffect(() => {
++    const token = localStorage.getItem('token');
++    if (token) {
++      API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
++      API.get('/auth/me')
++        .then(r => setUsuario(r.data))
++        .catch(() => { localStorage.removeItem('token'); })
++        .finally(() => setCargando(false));
++    } else {
++      setCargando(false);
++    }
++  }, []);
++
++  const login = (token, user) => {
++    localStorage.setItem('token', token);
++    API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
++    setUsuario(user);
++  };
++
++  const logout = () => {
++    localStorage.removeItem('token');
++    delete API.defaults.headers.common['Authorization'];
++    setUsuario(null);
++  };
++
++  // nivel del usuario para un módulo dado
++  const nivelEn = (modulo) => {
++    if (!usuario) return null;
++    const permisos = usuario.permisos || [];
++    const global = permisos.find(p => p.modulo === '*');
++    const especifico = permisos.find(p => p.modulo === modulo);
++    const orden = { consulta: 0, operador: 1, admin: 2 };
++    const candidatos = [global, especifico].filter(Boolean);
++    if (!candidatos.length) return null;
++    return candidatos.reduce((a, b) => orden[a.nivel] >= orden[b.nivel] ? a : b).nivel;
++  };
++
++  const puede = (modulo, accion) => {
++    const nivel = nivelEn(modulo);
++    if (!nivel) return false;
++    if (accion === 'ver') return true;
++    if (accion === 'editar') return nivel === 'operador' || nivel === 'admin';
++    if (accion === 'eliminar') return nivel === 'admin';
++    if (accion === 'admin') return nivel === 'admin';
++    return false;
++  };
++
++  return (
++    <AuthContext.Provider value={{ usuario, login, logout, puede, nivelEn, cargando }}>
++      {children}
++    </AuthContext.Provider>
++  );
++}
++
++export const useAuth = () => useContext(AuthContext);
+diff --git a/frontend/src/components/Login.jsx b/frontend/src/components/Login.jsx
+new file mode 100644
+index 0000000..0b04693
+--- /dev/null
++++ b/frontend/src/components/Login.jsx
+@@ -0,0 +1,65 @@
++import React, { useState } from 'react';
++import API from '../api';
++import { useAuth } from '../AuthContext';
++
++export default function Login() {
++  const { login } = useAuth();
++  const [form, setForm] = useState({ email: '', password: '' });
++  const [error, setError] = useState('');
++  const [cargando, setCargando] = useState(false);
++
++  const submit = async (e) => {
++    e.preventDefault();
++    setCargando(true);
++    setError('');
++    try {
++      const r = await API.post('/auth/login', form);
++      login(r.data.access_token, r.data.usuario);
++    } catch {
++      setError('Email o contraseña incorrectos.');
++    } finally {
++      setCargando(false);
++    }
++  };
++
++  return (
++    <div style={{ minHeight: '100vh', background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
++      <div style={{ background: '#fff', borderRadius: 16, padding: 40, width: '100%', maxWidth: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
++        <div style={{ textAlign: 'center', marginBottom: 32 }}>
++          <div style={{ fontSize: 36, marginBottom: 8 }}>🏢</div>
++          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a3a5c' }}>CN Pueblo Viejo 2</h1>
++          <p style={{ margin: '4px 0 0', color: '#888', fontSize: 14 }}>Sistema de Gestión</p>
++        </div>
++
++        <form onSubmit={submit}>
++          <div style={{ marginBottom: 16 }}>
++            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>Email</label>
++            <input
++              type="email" required autoFocus
++              value={form.email}
++              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
++              style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
++            />
++          </div>
++
++          <div style={{ marginBottom: 24 }}>
++            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>Contraseña</label>
++            <input
++              type="password" required
++              value={form.password}
++              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
++              style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
++            />
++          </div>
++
++          {error && <p style={{ color: '#e24b4a', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>{error}</p>}
++
++          <button type="submit" disabled={cargando}
++            style={{ width: '100%', padding: '12px', background: '#1a3a5c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: cargando ? 0.7 : 1 }}>
++            {cargando ? 'Ingresando...' : 'Ingresar'}
++          </button>
++        </form>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/Usuarios/UsuarioForm.jsx b/frontend/src/components/Usuarios/UsuarioForm.jsx
+new file mode 100644
+index 0000000..59ede8a
+--- /dev/null
++++ b/frontend/src/components/Usuarios/UsuarioForm.jsx
+@@ -0,0 +1,132 @@
++import React, { useState } from 'react';
++import API from '../../api';
++
++const MODULOS = [
++  { value: '*', label: '🌐 Global (todos los módulos)' },
++  { value: 'proveedores', label: 'Proveedores' },
++  { value: 'trabajos', label: 'Trabajos' },
++  { value: 'cotizaciones', label: 'Cotizaciones' },
++];
++
++const NIVELES = [
++  { value: 'admin', label: 'Admin — crear, editar, eliminar' },
++  { value: 'operador', label: 'Operador — crear y editar' },
++  { value: 'consulta', label: 'Consulta — solo ver' },
++];
++
++export default function UsuarioForm({ usuario, onClose }) {
++  const [form, setForm] = useState({
++    nombre: usuario?.nombre || '',
++    email: usuario?.email || '',
++    password: '',
++    activo: usuario?.activo ?? true,
++    permisos: usuario?.permisos?.map(p => ({ modulo: p.modulo, nivel: p.nivel })) || [],
++  });
++  const [guardando, setGuardando] = useState(false);
++  const [error, setError] = useState('');
++
++  const agregarPermiso = () => {
++    setForm(f => ({ ...f, permisos: [...f.permisos, { modulo: 'proveedores', nivel: 'consulta' }] }));
++  };
++
++  const quitarPermiso = (i) => {
++    setForm(f => ({ ...f, permisos: f.permisos.filter((_, idx) => idx !== i) }));
++  };
++
++  const setPermiso = (i, key, val) => {
++    setForm(f => {
++      const permisos = [...f.permisos];
++      permisos[i] = { ...permisos[i], [key]: val };
++      return { ...f, permisos };
++    });
++  };
++
++  const guardar = async () => {
++    if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
++    if (!form.email.trim()) { setError('El email es obligatorio'); return; }
++    if (!usuario && !form.password.trim()) { setError('La contraseña es obligatoria'); return; }
++    setGuardando(true);
++    setError('');
++    try {
++      const payload = { ...form };
++      if (!payload.password) delete payload.password;
++      if (usuario) {
++        await API.put(`/auth/usuarios/${usuario.id}`, payload);
++      } else {
++        await API.post('/auth/usuarios', payload);
++      }
++      onClose();
++    } catch (e) {
++      setError(e.response?.data?.detail || 'Error al guardar.');
++    } finally {
++      setGuardando(false);
++    }
++  };
++
++  return (
++    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
++      <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
++
++        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
++          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{usuario ? 'Editar usuario' : 'Nuevo usuario'}</h2>
++          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888' }}>×</button>
++        </div>
++
++        {[['Nombre', 'nombre', 'text'], ['Email', 'email', 'email'], [usuario ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña', 'password', 'password']].map(([label, key, type]) => (
++          <div key={key} style={{ marginBottom: 16 }}>
++            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 }}>{label}</label>
++            <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
++              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
++          </div>
++        ))}
++
++        {usuario && (
++          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
++            <input type="checkbox" id="activo" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} />
++            <label htmlFor="activo" style={{ fontSize: 14 }}>Usuario activo</label>
++          </div>
++        )}
++
++        {/* Permisos */}
++        <div style={{ marginBottom: 16 }}>
++          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
++            <label style={{ fontSize: 13, fontWeight: 500, color: '#555' }}>Permisos por módulo</label>
++            <button onClick={agregarPermiso}
++              style={{ padding: '4px 12px', background: '#e8f4fd', color: '#1a6ca8', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
++              + Agregar
++            </button>
++          </div>
++
++          {form.permisos.map((p, i) => (
++            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
++              <select value={p.modulo} onChange={e => setPermiso(i, 'modulo', e.target.value)}
++                style={{ flex: 1, padding: '8px 10px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13 }}>
++                {MODULOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
++              </select>
++              <select value={p.nivel} onChange={e => setPermiso(i, 'nivel', e.target.value)}
++                style={{ flex: 1, padding: '8px 10px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13 }}>
++                {NIVELES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
++              </select>
++              <button onClick={() => quitarPermiso(i)}
++                style={{ padding: '6px 10px', background: '#fff0f0', color: '#c00', border: 'none', borderRadius: 6, fontSize: 14, cursor: 'pointer' }}>×</button>
++            </div>
++          ))}
++
++          {form.permisos.length === 0 && (
++            <p style={{ color: '#999', fontSize: 13, margin: 0 }}>Sin permisos — el usuario no podrá acceder a ningún módulo.</p>
++          )}
++        </div>
++
++        {error && <p style={{ color: '#e24b4a', fontSize: 13, marginBottom: 16 }}>{error}</p>}
++
++        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
++          <button onClick={onClose} style={{ padding: '10px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
++          <button onClick={guardar} disabled={guardando}
++            style={{ padding: '10px 24px', background: '#1a3a5c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer', opacity: guardando ? 0.7 : 1 }}>
++            {guardando ? 'Guardando...' : 'Guardar'}
++          </button>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/Usuarios/Usuarios.jsx b/frontend/src/components/Usuarios/Usuarios.jsx
+new file mode 100644
+index 0000000..6965383
+--- /dev/null
++++ b/frontend/src/components/Usuarios/Usuarios.jsx
+@@ -0,0 +1,83 @@
++import React, { useState, useEffect } from 'react';
++import API from '../../api';
++import UsuarioForm from './UsuarioForm';
++
++export default function Usuarios() {
++  const [usuarios, setUsuarios] = useState([]);
++  const [cargando, setCargando] = useState(true);
++  const [mostrarForm, setMostrarForm] = useState(false);
++  const [usuarioEditar, setUsuarioEditar] = useState(null);
++
++  const cargar = () => {
++    setCargando(true);
++    API.get('/auth/usuarios')
++      .then(r => setUsuarios(r.data))
++      .catch(() => {})
++      .finally(() => setCargando(false));
++  };
++
++  useEffect(() => { cargar(); }, []);
++
++  const eliminar = async (id) => {
++    if (!window.confirm('¿Eliminar este usuario?')) return;
++    await API.delete(`/auth/usuarios/${id}`);
++    cargar();
++  };
++
++  const MODULOS = ['*', 'proveedores', 'trabajos', 'cotizaciones'];
++  const NIVEL_LABEL = { admin: 'Admin', operador: 'Operador', consulta: 'Consulta' };
++  const NIVEL_COLOR = { admin: '#198754', operador: '#0d6efd', consulta: '#6c757d' };
++
++  return (
++    <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
++      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
++        <div>
++          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Usuarios</h1>
++          <p style={{ margin: '4px 0 0', color: '#888', fontSize: 14 }}>Gestión de accesos y permisos</p>
++        </div>
++        <button onClick={() => { setUsuarioEditar(null); setMostrarForm(true); }}
++          style={{ padding: '10px 20px', background: '#1a3a5c', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
++          + Nuevo usuario
++        </button>
++      </div>
++
++      {cargando ? <p style={{ color: '#999' }}>Cargando...</p> : (
++        usuarios.map(u => (
++          <div key={u.id} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 12, padding: '16px 20px', marginBottom: 12 }}>
++            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
++              <div>
++                <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 15 }}>{u.nombre}</p>
++                <p style={{ margin: '0 0 8px', color: '#888', fontSize: 13 }}>{u.email}</p>
++                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
++                  {u.permisos.map(p => (
++                    <span key={p.id} style={{ background: '#f0f4ff', color: NIVEL_COLOR[p.nivel], fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, border: `1px solid ${NIVEL_COLOR[p.nivel]}30` }}>
++                      {p.modulo === '*' ? '🌐 Global' : p.modulo} · {NIVEL_LABEL[p.nivel]}
++                    </span>
++                  ))}
++                  {!u.activo && <span style={{ background: '#f8d7da', color: '#842029', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>Inactivo</span>}
++                </div>
++              </div>
++              <div style={{ display: 'flex', gap: 8 }}>
++                <button onClick={() => { setUsuarioEditar(u); setMostrarForm(true); }}
++                  style={{ padding: '6px 14px', background: '#f5f5f5', color: '#333', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
++                  Editar
++                </button>
++                <button onClick={() => eliminar(u.id)}
++                  style={{ padding: '6px 14px', background: '#fff0f0', color: '#c00', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
++                  Eliminar
++                </button>
++              </div>
++            </div>
++          </div>
++        ))
++      )}
++
++      {mostrarForm && (
++        <UsuarioForm
++          usuario={usuarioEditar}
++          onClose={() => { setMostrarForm(false); setUsuarioEditar(null); cargar(); }}
++        />
++      )}
++    </div>
++  );
++}
+-- 
+2.43.0
+
+
+From 7fdf4462bd302662e9c4cdd377b6117386ecca66 Mon Sep 17 00:00:00 2001
+From: fdamato-admin <fdamato27@gmail.com>
+Date: Fri, 30 Oct 2026 13:24:25 +0000
+Subject: [PATCH 2/3] =?UTF-8?q?feat:=20m=C3=B3dulo=20Presupuesto=20Mensual?=
+ =?UTF-8?q?=20completo?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Modelos: Partida, PresupuestoMensual, LineaPresupuesto, GastoMensual, CuotaPlazo
+- Schemas Pydantic v2 para todos los modelos de presupuesto
+- API FastAPI (/api/presupuesto/): CRUD partidas, cuotas, presupuestos mensuales,
+  generación automática (fijas=monto_ref, variables=promedio 6m, cuotas=vigentes),
+  resumen presupuestado vs real, recálculo automático de totales
+- Frontend: dashboard mensual con KPIs, tabla presupuestado/real/diferencia/barra %,
+  admin de partidas con carga semilla (18 partidas de recibos ENE-SEP 2026),
+  gestión de cuotas a plazo con progreso y registro de pagos
+- App.js: tab 💰 Presupuesto visible para admin y permiso presupuesto
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_019gnkJ7zAKXqzLMjeCW8Bef
+---
+ backend/app/api/presupuesto.py                | 379 ++++++++++++++++++
+ backend/app/models.py                         |  93 +++++
+ backend/app/schemas.py                        | 121 +++++-
+ backend/main.py                               |   3 +-
+ frontend/src/App.js                           |   3 +
+ .../components/Presupuesto/CuotasAdmin.jsx    | 242 +++++++++++
+ .../components/Presupuesto/PartidasAdmin.jsx  | 249 ++++++++++++
+ .../Presupuesto/PresupuestoDashboard.jsx      | 305 ++++++++++++++
+ frontend/src/components/Presupuesto/index.jsx |  47 +++
+ 9 files changed, 1440 insertions(+), 2 deletions(-)
+ create mode 100644 backend/app/api/presupuesto.py
+ create mode 100644 frontend/src/components/Presupuesto/CuotasAdmin.jsx
+ create mode 100644 frontend/src/components/Presupuesto/PartidasAdmin.jsx
+ create mode 100644 frontend/src/components/Presupuesto/PresupuestoDashboard.jsx
+ create mode 100644 frontend/src/components/Presupuesto/index.jsx
+
+diff --git a/backend/app/api/presupuesto.py b/backend/app/api/presupuesto.py
+new file mode 100644
+index 0000000..d5625e7
+--- /dev/null
++++ b/backend/app/api/presupuesto.py
+@@ -0,0 +1,379 @@
++"""
++API de Presupuesto Mensual
++Partidas fijas, variables, imprevistos y cuotas a plazo.
++"""
++from fastapi import APIRouter, Depends, HTTPException
++from sqlalchemy.orm import Session
++from sqlalchemy import func
++from typing import List, Optional
++from decimal import Decimal
++
++from ..database import get_db
++from ..models import Partida, PresupuestoMensual, LineaPresupuesto, GastoMensual, CuotaPlazo, TipoPartida
++from ..schemas import (
++    PartidaCreate, PartidaUpdate, PartidaOut,
++    PresupuestoMensualCreate, PresupuestoMensualUpdate, PresupuestoMensualOut,
++    LineaPresupuestoCreate, LineaPresupuestoUpdate, LineaPresupuestoOut,
++    GastoMensualCreate, GastoMensualOut,
++    CuotaPlazoCreate, CuotaPlazoUpdate, CuotaPlazoOut,
++)
++
++router = APIRouter(prefix="/presupuesto", tags=["presupuesto"])
++
++MESES_PROMEDIO = 6  # cuántos meses hacia atrás para calcular promedio de variables
++
++
++# ─────────────────────────────────────────────────────────────────
++# PARTIDAS (catálogo)
++# ─────────────────────────────────────────────────────────────────
++
++@router.get("/partidas", response_model=List[PartidaOut])
++def listar_partidas(activa: Optional[bool] = None, db: Session = Depends(get_db)):
++    q = db.query(Partida)
++    if activa is not None:
++        q = q.filter(Partida.activa == activa)
++    return q.order_by(Partida.orden, Partida.id).all()
++
++
++@router.post("/partidas", response_model=PartidaOut, status_code=201)
++def crear_partida(data: PartidaCreate, db: Session = Depends(get_db)):
++    partida = Partida(**data.model_dump())
++    db.add(partida)
++    db.commit()
++    db.refresh(partida)
++    return partida
++
++
++@router.put("/partidas/{partida_id}", response_model=PartidaOut)
++def actualizar_partida(partida_id: int, data: PartidaUpdate, db: Session = Depends(get_db)):
++    partida = db.query(Partida).filter(Partida.id == partida_id).first()
++    if not partida:
++        raise HTTPException(status_code=404, detail="Partida no encontrada")
++    for k, v in data.model_dump(exclude_unset=True).items():
++        setattr(partida, k, v)
++    db.commit()
++    db.refresh(partida)
++    return partida
++
++
++@router.delete("/partidas/{partida_id}", status_code=204)
++def eliminar_partida(partida_id: int, db: Session = Depends(get_db)):
++    partida = db.query(Partida).filter(Partida.id == partida_id).first()
++    if not partida:
++        raise HTTPException(status_code=404, detail="Partida no encontrada")
++    db.delete(partida)
++    db.commit()
++
++
++# ─────────────────────────────────────────────────────────────────
++# GASTOS MENSUALES HISTÓRICOS
++# ─────────────────────────────────────────────────────────────────
++
++@router.get("/gastos", response_model=List[GastoMensualOut])
++def listar_gastos(partida_id: Optional[int] = None, anio: Optional[int] = None, mes: Optional[int] = None, db: Session = Depends(get_db)):
++    q = db.query(GastoMensual)
++    if partida_id:
++        q = q.filter(GastoMensual.partida_id == partida_id)
++    if anio:
++        q = q.filter(GastoMensual.anio == anio)
++    if mes:
++        q = q.filter(GastoMensual.mes == mes)
++    return q.order_by(GastoMensual.anio.desc(), GastoMensual.mes.desc()).all()
++
++
++@router.post("/gastos", response_model=GastoMensualOut, status_code=201)
++def registrar_gasto(data: GastoMensualCreate, db: Session = Depends(get_db)):
++    # Verificar que no exista ya gasto para esa partida/mes/año
++    existe = db.query(GastoMensual).filter(
++        GastoMensual.partida_id == data.partida_id,
++        GastoMensual.anio == data.anio,
++        GastoMensual.mes == data.mes,
++    ).first()
++    if existe:
++        # Actualizar en lugar de duplicar
++        existe.monto = data.monto
++        existe.notas = data.notas
++        db.commit()
++        db.refresh(existe)
++        return existe
++    gasto = GastoMensual(**data.model_dump())
++    db.add(gasto)
++    db.commit()
++    db.refresh(gasto)
++    return gasto
++
++
++@router.delete("/gastos/{gasto_id}", status_code=204)
++def eliminar_gasto(gasto_id: int, db: Session = Depends(get_db)):
++    gasto = db.query(GastoMensual).filter(GastoMensual.id == gasto_id).first()
++    if not gasto:
++        raise HTTPException(status_code=404, detail="Gasto no encontrado")
++    db.delete(gasto)
++    db.commit()
++
++
++# ─────────────────────────────────────────────────────────────────
++# CUOTAS A PLAZO
++# ─────────────────────────────────────────────────────────────────
++
++@router.get("/cuotas", response_model=List[CuotaPlazoOut])
++def listar_cuotas(activa: Optional[bool] = None, db: Session = Depends(get_db)):
++    q = db.query(CuotaPlazo)
++    if activa is not None:
++        q = q.filter(CuotaPlazo.activa == activa)
++    return q.order_by(CuotaPlazo.anio_inicio.desc(), CuotaPlazo.mes_inicio.desc()).all()
++
++
++@router.post("/cuotas", response_model=CuotaPlazoOut, status_code=201)
++def crear_cuota(data: CuotaPlazoCreate, db: Session = Depends(get_db)):
++    cuota = CuotaPlazo(**data.model_dump())
++    db.add(cuota)
++    db.commit()
++    db.refresh(cuota)
++    return cuota
++
++
++@router.put("/cuotas/{cuota_id}", response_model=CuotaPlazoOut)
++def actualizar_cuota(cuota_id: int, data: CuotaPlazoUpdate, db: Session = Depends(get_db)):
++    cuota = db.query(CuotaPlazo).filter(CuotaPlazo.id == cuota_id).first()
++    if not cuota:
++        raise HTTPException(status_code=404, detail="Cuota no encontrada")
++    for k, v in data.model_dump(exclude_unset=True).items():
++        setattr(cuota, k, v)
++    # Si ya se pagaron todas, desactivar
++    if cuota.cuotas_pagadas >= cuota.num_cuotas:
++        cuota.activa = False
++    db.commit()
++    db.refresh(cuota)
++    return cuota
++
++
++@router.delete("/cuotas/{cuota_id}", status_code=204)
++def eliminar_cuota(cuota_id: int, db: Session = Depends(get_db)):
++    cuota = db.query(CuotaPlazo).filter(CuotaPlazo.id == cuota_id).first()
++    if not cuota:
++        raise HTTPException(status_code=404, detail="Cuota no encontrada")
++    db.delete(cuota)
++    db.commit()
++
++
++# ─────────────────────────────────────────────────────────────────
++# PRESUPUESTOS MENSUALES
++# ─────────────────────────────────────────────────────────────────
++
++@router.get("/", response_model=List[PresupuestoMensualOut])
++def listar_presupuestos(db: Session = Depends(get_db)):
++    return db.query(PresupuestoMensual).order_by(
++        PresupuestoMensual.anio.desc(), PresupuestoMensual.mes.desc()
++    ).all()
++
++
++@router.get("/{anio}/{mes}", response_model=PresupuestoMensualOut)
++def obtener_presupuesto(anio: int, mes: int, db: Session = Depends(get_db)):
++    p = db.query(PresupuestoMensual).filter(
++        PresupuestoMensual.anio == anio,
++        PresupuestoMensual.mes == mes,
++    ).first()
++    if not p:
++        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
++    return p
++
++
++@router.post("/generar/{anio}/{mes}", response_model=PresupuestoMensualOut, status_code=201)
++def generar_presupuesto(anio: int, mes: int, meta_por_villa: Optional[Decimal] = None, db: Session = Depends(get_db)):
++    """
++    Genera automáticamente el presupuesto del mes basado en:
++    - Partidas fijas: usa monto_referencia
++    - Partidas variables: calcula promedio de los últimos N meses
++    - Cuotas a plazo activas: incluye cuotas vigentes para ese mes
++    """
++    # Verificar si ya existe
++    existe = db.query(PresupuestoMensual).filter(
++        PresupuestoMensual.anio == anio,
++        PresupuestoMensual.mes == mes,
++    ).first()
++    if existe:
++        raise HTTPException(status_code=409, detail="Ya existe un presupuesto para este mes")
++
++    partidas = db.query(Partida).filter(Partida.activa == True).order_by(Partida.orden).all()
++
++    lineas = []
++    total = Decimal("0")
++
++    for orden_idx, partida in enumerate(partidas):
++        monto_ppto = None
++
++        if partida.tipo == TipoPartida.fija:
++            monto_ppto = partida.monto_referencia or Decimal("0")
++
++        elif partida.tipo == TipoPartida.variable:
++            # Calcular promedio de los últimos MESES_PROMEDIO meses con datos
++            gastos_recientes = db.query(GastoMensual).filter(
++                GastoMensual.partida_id == partida.id,
++            ).order_by(GastoMensual.anio.desc(), GastoMensual.mes.desc()).limit(MESES_PROMEDIO).all()
++
++            if gastos_recientes:
++                monto_ppto = sum(g.monto for g in gastos_recientes) / len(gastos_recientes)
++            else:
++                monto_ppto = partida.monto_referencia or Decimal("0")
++
++        elif partida.tipo in (TipoPartida.imprevisto, TipoPartida.cuota):
++            monto_ppto = partida.monto_referencia or Decimal("0")
++
++        linea = LineaPresupuesto(
++            nombre_partida=partida.nombre,
++            tipo=partida.tipo,
++            partida_id=partida.id,
++            monto_presupuestado=monto_ppto,
++            orden=orden_idx,
++        )
++        lineas.append(linea)
++        if monto_ppto:
++            total += monto_ppto
++
++    # Agregar cuotas a plazo activas para este mes
++    cuotas_activas = db.query(CuotaPlazo).filter(CuotaPlazo.activa == True).all()
++    for cuota in cuotas_activas:
++        # Verificar si la cuota aplica para este mes
++        inicio_abs = cuota.anio_inicio * 12 + cuota.mes_inicio
++        actual_abs = anio * 12 + mes
++        fin_abs = inicio_abs + cuota.num_cuotas - 1
++        if inicio_abs <= actual_abs <= fin_abs and cuota.cuotas_pagadas < cuota.num_cuotas:
++            linea = LineaPresupuesto(
++                nombre_partida=f"Cuota: {cuota.descripcion}",
++                tipo=TipoPartida.cuota,
++                partida_id=cuota.partida_id,
++                monto_presupuestado=cuota.monto_cuota,
++                orden=9000 + cuota.id,
++                notas=f"Cuota {cuota.cuotas_pagadas + 1}/{cuota.num_cuotas}",
++            )
++            lineas.append(linea)
++            total += cuota.monto_cuota
++
++    presupuesto = PresupuestoMensual(
++        anio=anio,
++        mes=mes,
++        meta_por_villa=meta_por_villa,
++        total_presupuestado=total,
++        lineas=lineas,
++    )
++    db.add(presupuesto)
++    db.commit()
++    db.refresh(presupuesto)
++    return presupuesto
++
++
++@router.put("/{presupuesto_id}", response_model=PresupuestoMensualOut)
++def actualizar_presupuesto(presupuesto_id: int, data: PresupuestoMensualUpdate, db: Session = Depends(get_db)):
++    p = db.query(PresupuestoMensual).filter(PresupuestoMensual.id == presupuesto_id).first()
++    if not p:
++        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
++    for k, v in data.model_dump(exclude_unset=True).items():
++        setattr(p, k, v)
++    db.commit()
++    db.refresh(p)
++    return p
++
++
++@router.put("/{presupuesto_id}/lineas/{linea_id}", response_model=LineaPresupuestoOut)
++def actualizar_linea(presupuesto_id: int, linea_id: int, data: LineaPresupuestoUpdate, db: Session = Depends(get_db)):
++    linea = db.query(LineaPresupuesto).filter(
++        LineaPresupuesto.id == linea_id,
++        LineaPresupuesto.presupuesto_id == presupuesto_id,
++    ).first()
++    if not linea:
++        raise HTTPException(status_code=404, detail="Línea no encontrada")
++    for k, v in data.model_dump(exclude_unset=True).items():
++        setattr(linea, k, v)
++
++    # Recalcular totales del presupuesto
++    presupuesto = db.query(PresupuestoMensual).filter(PresupuestoMensual.id == presupuesto_id).first()
++    if presupuesto:
++        lineas = db.query(LineaPresupuesto).filter(LineaPresupuesto.presupuesto_id == presupuesto_id).all()
++        presupuesto.total_presupuestado = sum(l.monto_presupuestado or 0 for l in lineas)
++        presupuesto.total_real = sum(l.monto_real or 0 for l in lineas if l.monto_real is not None)
++
++    db.commit()
++    db.refresh(linea)
++    return linea
++
++
++@router.post("/{presupuesto_id}/lineas", response_model=LineaPresupuestoOut, status_code=201)
++def agregar_linea(presupuesto_id: int, data: LineaPresupuestoCreate, db: Session = Depends(get_db)):
++    p = db.query(PresupuestoMensual).filter(PresupuestoMensual.id == presupuesto_id).first()
++    if not p:
++        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
++    linea = LineaPresupuesto(presupuesto_id=presupuesto_id, **data.model_dump())
++    db.add(linea)
++    db.commit()
++    db.refresh(linea)
++    return linea
++
++
++@router.delete("/{presupuesto_id}/lineas/{linea_id}", status_code=204)
++def eliminar_linea(presupuesto_id: int, linea_id: int, db: Session = Depends(get_db)):
++    linea = db.query(LineaPresupuesto).filter(
++        LineaPresupuesto.id == linea_id,
++        LineaPresupuesto.presupuesto_id == presupuesto_id,
++    ).first()
++    if not linea:
++        raise HTTPException(status_code=404, detail="Línea no encontrada")
++    db.delete(linea)
++    db.commit()
++
++
++@router.delete("/{presupuesto_id}", status_code=204)
++def eliminar_presupuesto(presupuesto_id: int, db: Session = Depends(get_db)):
++    p = db.query(PresupuestoMensual).filter(PresupuestoMensual.id == presupuesto_id).first()
++    if not p:
++        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
++    db.delete(p)
++    db.commit()
++
++
++# ─────────────────────────────────────────────────────────────────
++# RESUMEN / DASHBOARD
++# ─────────────────────────────────────────────────────────────────
++
++@router.get("/{anio}/{mes}/resumen")
++def resumen_presupuesto(anio: int, mes: int, db: Session = Depends(get_db)):
++    """Devuelve el presupuesto del mes con comparativo presupuestado vs real."""
++    p = db.query(PresupuestoMensual).filter(
++        PresupuestoMensual.anio == anio,
++        PresupuestoMensual.mes == mes,
++    ).first()
++    if not p:
++        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
++
++    lineas_out = []
++    for l in sorted(p.lineas, key=lambda x: x.orden):
++        ppto = float(l.monto_presupuestado or 0)
++        real = float(l.monto_real or 0)
++        diff = real - ppto
++        lineas_out.append({
++            "id": l.id,
++            "nombre": l.nombre_partida,
++            "tipo": l.tipo,
++            "presupuestado": ppto,
++            "real": real,
++            "diferencia": diff,
++            "pct_ejecucion": round(real / ppto * 100, 1) if ppto else None,
++            "notas": l.notas,
++        })
++
++    total_ppto = float(p.total_presupuestado or 0)
++    total_real = float(p.total_real or 0)
++    num_villas = 79  # total villas del conjunto a alicuota 1.26%
++
++    return {
++        "anio": anio,
++        "mes": mes,
++        "meta_por_villa": float(p.meta_por_villa or 0),
++        "total_presupuestado": total_ppto,
++        "total_real": total_real,
++        "diferencia": total_real - total_ppto,
++        "por_villa_presupuestado": round(total_ppto / num_villas, 2),
++        "por_villa_real": round(total_real / num_villas, 2),
++        "cerrado": p.cerrado,
++        "lineas": lineas_out,
++    }
+diff --git a/backend/app/models.py b/backend/app/models.py
+index a4c6a47..468a95f 100644
+--- a/backend/app/models.py
++++ b/backend/app/models.py
+@@ -133,3 +133,96 @@ class Cotizacion(Base):
+ 
+     trabajo = relationship("Trabajo", back_populates="cotizaciones")
+     proveedor = relationship("Proveedor", back_populates="cotizaciones")
++    documento_url = Column(String(500), nullable=True)
++
++
++# ── Presupuesto Mensual ─────────────────────────────────────────────────────
++
++class TipoPartida(str, enum.Enum):
++    fija = "fija"           # monto constante (contratos)
++    variable = "variable"   # fluctúa mes a mes
++    imprevisto = "imprevisto"  # línea libre para imprevistos/extras
++    cuota = "cuota"         # cuota a plazo (contrato multi-mes)
++
++class Partida(Base):
++    """Catálogo de partidas del condominio (configurado por admin)."""
++    __tablename__ = "partidas"
++
++    id = Column(Integer, primary_key=True, index=True)
++    nombre = Column(String(150), nullable=False)
++    tipo = Column(Enum(TipoPartida), nullable=False)
++    monto_referencia = Column(Numeric(12, 2), nullable=True)   # monto fijo o promedio base
++    orden = Column(Integer, default=0)                          # para ordenar en pantalla
++    activa = Column(Boolean, default=True)
++    notas = Column(Text, nullable=True)
++    creado_en = Column(DateTime(timezone=True), server_default=func.now())
++
++    gastos = relationship("GastoMensual", back_populates="partida")
++    cuotas = relationship("CuotaPlazo", back_populates="partida")
++
++class PresupuestoMensual(Base):
++    """Encabezado del presupuesto de un mes."""
++    __tablename__ = "presupuestos_mensuales"
++
++    id = Column(Integer, primary_key=True, index=True)
++    anio = Column(Integer, nullable=False)
++    mes = Column(Integer, nullable=False)           # 1-12
++    meta_por_villa = Column(Numeric(12, 2), nullable=True)  # target admin
++    total_presupuestado = Column(Numeric(12, 2), nullable=True)
++    total_real = Column(Numeric(12, 2), nullable=True)
++    cerrado = Column(Boolean, default=False)        # True = mes cerrado, no editar
++    notas = Column(Text, nullable=True)
++    creado_en = Column(DateTime(timezone=True), server_default=func.now())
++    actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
++
++    lineas = relationship("LineaPresupuesto", back_populates="presupuesto", cascade="all, delete-orphan")
++
++class LineaPresupuesto(Base):
++    """Una partida dentro del presupuesto de un mes."""
++    __tablename__ = "lineas_presupuesto"
++
++    id = Column(Integer, primary_key=True, index=True)
++    presupuesto_id = Column(Integer, ForeignKey("presupuestos_mensuales.id"), nullable=False)
++    partida_id = Column(Integer, ForeignKey("partidas.id"), nullable=True)
++    nombre_partida = Column(String(150), nullable=False)   # snapshot del nombre
++    tipo = Column(Enum(TipoPartida), nullable=False)
++    monto_presupuestado = Column(Numeric(12, 2), nullable=True)
++    monto_real = Column(Numeric(12, 2), nullable=True)
++    orden = Column(Integer, default=0)
++    notas = Column(Text, nullable=True)
++
++    presupuesto = relationship("PresupuestoMensual", back_populates="lineas")
++    partida = relationship("Partida", foreign_keys=[partida_id])
++
++class GastoMensual(Base):
++    """Registro del gasto real mensual por partida (histórico)."""
++    __tablename__ = "gastos_mensuales"
++
++    id = Column(Integer, primary_key=True, index=True)
++    partida_id = Column(Integer, ForeignKey("partidas.id"), nullable=False)
++    anio = Column(Integer, nullable=False)
++    mes = Column(Integer, nullable=False)
++    monto = Column(Numeric(12, 2), nullable=False)
++    notas = Column(Text, nullable=True)
++    creado_en = Column(DateTime(timezone=True), server_default=func.now())
++
++    partida = relationship("Partida", back_populates="gastos")
++
++class CuotaPlazo(Base):
++    """Cuota a plazo — contrato dividido en N cuotas mensuales."""
++    __tablename__ = "cuotas_plazo"
++
++    id = Column(Integer, primary_key=True, index=True)
++    partida_id = Column(Integer, ForeignKey("partidas.id"), nullable=True)
++    descripcion = Column(String(250), nullable=False)
++    monto_total = Column(Numeric(12, 2), nullable=False)
++    monto_cuota = Column(Numeric(12, 2), nullable=False)
++    num_cuotas = Column(Integer, nullable=False)
++    cuotas_pagadas = Column(Integer, default=0)
++    mes_inicio = Column(Integer, nullable=False)   # 1-12
++    anio_inicio = Column(Integer, nullable=False)
++    activa = Column(Boolean, default=True)
++    notas = Column(Text, nullable=True)
++    creado_en = Column(DateTime(timezone=True), server_default=func.now())
++
++    partida = relationship("Partida", back_populates="cuotas")
+diff --git a/backend/app/schemas.py b/backend/app/schemas.py
+index 7307d43..0e1d2c3 100644
+--- a/backend/app/schemas.py
++++ b/backend/app/schemas.py
+@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr
+ from typing import Optional, List
+ from decimal import Decimal
+ from datetime import datetime
+-from .models import TipoProveedor, EstadoProveedor, TipoTrabajo, PrioridadTrabajo, EstadoTrabajo, EstadoCotizacion, NivelPermiso
++from .models import TipoProveedor, EstadoProveedor, TipoTrabajo, PrioridadTrabajo, EstadoTrabajo, EstadoCotizacion, NivelPermiso, TipoPartida
+ 
+ 
+ # ── Auth ─────────────────────────────────────────────────────────────────────
+@@ -137,8 +137,127 @@ class CotizacionUpdate(BaseModel):
+ class CotizacionOut(CotizacionBase):
+     id: int
+     estado: EstadoCotizacion
++    documento_url: Optional[str] = None
+     creado_en: datetime
+     actualizado_en: Optional[datetime] = None
+ 
+     class Config:
+         from_attributes = True
++
++
++# ── Presupuesto Mensual ─────────────────────────────────────────────────────
++
++class PartidaBase(BaseModel):
++    nombre: str
++    tipo: TipoPartida
++    monto_referencia: Optional[Decimal] = None
++    orden: int = 0
++    activa: bool = True
++    notas: Optional[str] = None
++
++class PartidaCreate(PartidaBase):
++    pass
++
++class PartidaUpdate(BaseModel):
++    nombre: Optional[str] = None
++    tipo: Optional[TipoPartida] = None
++    monto_referencia: Optional[Decimal] = None
++    orden: Optional[int] = None
++    activa: Optional[bool] = None
++    notas: Optional[str] = None
++
++class PartidaOut(PartidaBase):
++    id: int
++    creado_en: datetime
++    class Config:
++        from_attributes = True
++
++class LineaPresupuestoBase(BaseModel):
++    partida_id: Optional[int] = None
++    nombre_partida: str
++    tipo: TipoPartida
++    monto_presupuestado: Optional[Decimal] = None
++    monto_real: Optional[Decimal] = None
++    orden: int = 0
++    notas: Optional[str] = None
++
++class LineaPresupuestoCreate(LineaPresupuestoBase):
++    pass
++
++class LineaPresupuestoUpdate(BaseModel):
++    monto_presupuestado: Optional[Decimal] = None
++    monto_real: Optional[Decimal] = None
++    notas: Optional[str] = None
++
++class LineaPresupuestoOut(LineaPresupuestoBase):
++    id: int
++    presupuesto_id: int
++    class Config:
++        from_attributes = True
++
++class PresupuestoMensualCreate(BaseModel):
++    anio: int
++    mes: int
++    meta_por_villa: Optional[Decimal] = None
++    notas: Optional[str] = None
++
++class PresupuestoMensualUpdate(BaseModel):
++    meta_por_villa: Optional[Decimal] = None
++    total_presupuestado: Optional[Decimal] = None
++    total_real: Optional[Decimal] = None
++    cerrado: Optional[bool] = None
++    notas: Optional[str] = None
++
++class PresupuestoMensualOut(BaseModel):
++    id: int
++    anio: int
++    mes: int
++    meta_por_villa: Optional[Decimal] = None
++    total_presupuestado: Optional[Decimal] = None
++    total_real: Optional[Decimal] = None
++    cerrado: bool
++    notas: Optional[str] = None
++    creado_en: datetime
++    actualizado_en: Optional[datetime] = None
++    lineas: List[LineaPresupuestoOut] = []
++    class Config:
++        from_attributes = True
++
++class GastoMensualCreate(BaseModel):
++    partida_id: int
++    anio: int
++    mes: int
++    monto: Decimal
++    notas: Optional[str] = None
++
++class GastoMensualOut(GastoMensualCreate):
++    id: int
++    creado_en: datetime
++    class Config:
++        from_attributes = True
++
++class CuotaPlazoBase(BaseModel):
++    partida_id: Optional[int] = None
++    descripcion: str
++    monto_total: Decimal
++    monto_cuota: Decimal
++    num_cuotas: int
++    cuotas_pagadas: int = 0
++    mes_inicio: int
++    anio_inicio: int
++    activa: bool = True
++    notas: Optional[str] = None
++
++class CuotaPlazoCreate(CuotaPlazoBase):
++    pass
++
++class CuotaPlazoUpdate(BaseModel):
++    cuotas_pagadas: Optional[int] = None
++    activa: Optional[bool] = None
++    notas: Optional[str] = None
++
++class CuotaPlazoOut(CuotaPlazoBase):
++    id: int
++    creado_en: datetime
++    class Config:
++        from_attributes = True
+diff --git a/backend/main.py b/backend/main.py
+index 7277e2f..3c9e700 100644
+--- a/backend/main.py
++++ b/backend/main.py
+@@ -1,7 +1,7 @@
+ from fastapi import FastAPI
+ from fastapi.middleware.cors import CORSMiddleware
+ from app.database import Base, engine
+-from app.api import proveedores, trabajos, auth
++from app.api import proveedores, trabajos, auth, presupuesto
+ 
+ Base.metadata.create_all(bind=engine)
+ 
+@@ -22,6 +22,7 @@ app.add_middleware(
+ app.include_router(auth.router, prefix="/api")
+ app.include_router(proveedores.router, prefix="/api")
+ app.include_router(trabajos.router, prefix="/api")
++app.include_router(presupuesto.router, prefix="/api")
+ 
+ @app.get("/")
+ def root():
+diff --git a/frontend/src/App.js b/frontend/src/App.js
+index f03579e..8ddff58 100644
+--- a/frontend/src/App.js
++++ b/frontend/src/App.js
+@@ -4,6 +4,7 @@ import Login from './components/Login';
+ import ProveedoresList from './components/Proveedores/ProveedoresList';
+ import Trabajos from './components/Trabajos/Trabajos';
+ import Usuarios from './components/Usuarios/Usuarios';
++import Presupuesto from './components/Presupuesto';
+ 
+ function AppInner() {
+   const { usuario, logout, puede } = useAuth();
+@@ -14,6 +15,7 @@ function AppInner() {
+   const MODULOS = [
+     { id: 'trabajos', label: '🔧 Trabajos', visible: puede('trabajos', 'ver') },
+     { id: 'proveedores', label: '🏢 Proveedores', visible: puede('proveedores', 'ver') },
++    { id: 'presupuesto', label: '💰 Presupuesto', visible: puede('presupuesto', 'ver') || puede('*', 'admin') },
+     { id: 'usuarios', label: '👤 Usuarios', visible: puede('*', 'admin') },
+   ].filter(m => m.visible);
+ 
+@@ -46,6 +48,7 @@ function AppInner() {
+ 
+       {modulo === 'trabajos' && <Trabajos />}
+       {modulo === 'proveedores' && <ProveedoresList />}
++      {modulo === 'presupuesto' && <Presupuesto />}
+       {modulo === 'usuarios' && <Usuarios />}
+     </div>
+   );
+diff --git a/frontend/src/components/Presupuesto/CuotasAdmin.jsx b/frontend/src/components/Presupuesto/CuotasAdmin.jsx
+new file mode 100644
+index 0000000..ca511cc
+--- /dev/null
++++ b/frontend/src/components/Presupuesto/CuotasAdmin.jsx
+@@ -0,0 +1,242 @@
++import React, { useState, useEffect } from 'react';
++import api from '../../api';
++
++const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
++
++function fmt(n) {
++  if (n == null) return '—';
++  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
++}
++
++const EMPTY = {
++  descripcion: '',
++  monto_total: '',
++  monto_cuota: '',
++  num_cuotas: '',
++  cuotas_pagadas: 0,
++  mes_inicio: new Date().getMonth() + 1,
++  anio_inicio: new Date().getFullYear(),
++  notas: '',
++};
++
++export default function CuotasAdmin() {
++  const [cuotas, setCuotas] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [form, setForm] = useState(null);
++  const [soloActivas, setSoloActivas] = useState(true);
++
++  const cargar = async () => {
++    setLoading(true);
++    try {
++      const r = await api.get('/presupuesto/cuotas', { params: soloActivas ? { activa: true } : {} });
++      setCuotas(r.data);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  useEffect(() => { cargar(); }, [soloActivas]); // eslint-disable-line
++
++  const guardar = async () => {
++    const payload = {
++      descripcion: form.descripcion,
++      monto_total: Number(form.monto_total),
++      monto_cuota: Number(form.monto_cuota),
++      num_cuotas: Number(form.num_cuotas),
++      cuotas_pagadas: Number(form.cuotas_pagadas),
++      mes_inicio: Number(form.mes_inicio),
++      anio_inicio: Number(form.anio_inicio),
++      activa: true,
++      notas: form.notas || null,
++    };
++    try {
++      if (form.id) {
++        await api.put(`/presupuesto/cuotas/${form.id}`, {
++          cuotas_pagadas: payload.cuotas_pagadas,
++          activa: payload.activa,
++          notas: payload.notas,
++        });
++      } else {
++        await api.post('/presupuesto/cuotas', payload);
++      }
++      setForm(null);
++      await cargar();
++    } catch {
++      alert('Error al guardar');
++    }
++  };
++
++  const registrarPago = async (c) => {
++    if (c.cuotas_pagadas >= c.num_cuotas) return;
++    try {
++      await api.put(`/presupuesto/cuotas/${c.id}`, { cuotas_pagadas: c.cuotas_pagadas + 1 });
++      await cargar();
++    } catch {
++      alert('Error al registrar pago');
++    }
++  };
++
++  const eliminar = async (id) => {
++    if (!window.confirm('¿Eliminar esta cuota?')) return;
++    try {
++      await api.delete(`/presupuesto/cuotas/${id}`);
++      await cargar();
++    } catch {
++      alert('Error al eliminar');
++    }
++  };
++
++  return (
++    <div>
++      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
++        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
++          <h3 style={{ margin: 0, color: '#333' }}>Cuotas a Plazo</h3>
++          <label style={{ fontSize: 13, color: '#666', cursor: 'pointer' }}>
++            <input type="checkbox" checked={soloActivas} onChange={e => setSoloActivas(e.target.checked)} style={{ marginRight: 6 }} />
++            Solo activas
++          </label>
++        </div>
++        <button onClick={() => setForm({ ...EMPTY })}
++          style={{ padding: '9px 16px', background: '#6A1B9A', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
++          + Nueva Cuota
++        </button>
++      </div>
++
++      {loading ? (
++        <p style={{ color: '#888' }}>Cargando…</p>
++      ) : cuotas.length === 0 ? (
++        <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa' }}>
++          <p>📆</p>
++          <p>No hay cuotas a plazo {soloActivas ? 'activas' : ''} registradas.</p>
++        </div>
++      ) : (
++        <div style={{ display: 'grid', gap: 12 }}>
++          {cuotas.map(c => {
++            const pct = Math.round(c.cuotas_pagadas / c.num_cuotas * 100);
++            const pendientes = c.num_cuotas - c.cuotas_pagadas;
++            return (
++              <div key={c.id} style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 10, padding: '16px 20px' }}>
++                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
++                  <div style={{ flex: 1 }}>
++                    <div style={{ fontWeight: 600, fontSize: 15, color: c.activa ? '#333' : '#aaa' }}>{c.descripcion}</div>
++                    <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
++                      Inicio: {MESES[c.mes_inicio]} {c.anio_inicio} · {c.num_cuotas} cuotas de Bs {fmt(c.monto_cuota)} · Total: Bs {fmt(c.monto_total)}
++                    </div>
++                    {c.notas && <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>{c.notas}</div>}
++                  </div>
++                  <div style={{ textAlign: 'right' }}>
++                    <div style={{ fontWeight: 700, fontSize: 18, color: '#6A1B9A' }}>
++                      {c.cuotas_pagadas}/{c.num_cuotas}
++                    </div>
++                    <div style={{ fontSize: 11, color: '#888' }}>cuotas pagadas</div>
++                  </div>
++                </div>
++
++                {/* Barra progreso */}
++                <div style={{ marginTop: 12 }}>
++                  <div style={{ background: '#f0e6ff', borderRadius: 4, height: 8 }}>
++                    <div style={{ width: `${pct}%`, background: c.activa ? '#6A1B9A' : '#ccc', height: 8, borderRadius: 4, transition: 'width .3s' }} />
++                  </div>
++                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginTop: 4 }}>
++                    <span>{pct}% completado</span>
++                    <span>{pendientes > 0 ? `${pendientes} cuota${pendientes > 1 ? 's' : ''} pendiente${pendientes > 1 ? 's' : ''}` : '✅ Completado'}</span>
++                  </div>
++                </div>
++
++                {/* Acciones */}
++                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
++                  {c.activa && c.cuotas_pagadas < c.num_cuotas && (
++                    <button onClick={() => registrarPago(c)}
++                      style={{ padding: '6px 14px', background: '#e8f5e9', color: '#2e7d32', border: '1px solid #2e7d32', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
++                      ✓ Registrar pago
++                    </button>
++                  )}
++                  <button onClick={() => setForm({ ...c })}
++                    style={{ padding: '6px 12px', background: '#f5f5f5', color: '#555', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
++                    ✏️ Editar
++                  </button>
++                  <button onClick={() => eliminar(c.id)}
++                    style={{ padding: '6px 12px', background: '#fff', color: '#c62828', border: '1px solid #e0e0e0', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
++                    🗑
++                  </button>
++                </div>
++              </div>
++            );
++          })}
++        </div>
++      )}
++
++      {/* Modal */}
++      {form && (
++        <div style={overlay}>
++          <div style={modal}>
++            <h3 style={{ margin: '0 0 20px', color: '#6A1B9A' }}>{form.id ? 'Editar Cuota' : 'Nueva Cuota a Plazo'}</h3>
++
++            <Field label="Descripción *">
++              <input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })}
++                style={inp} placeholder="Ej: Contrato Bomba de agua" />
++            </Field>
++            {!form.id && (
++              <>
++                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
++                  <Field label="Monto Total (Bs)">
++                    <input type="number" value={form.monto_total} onChange={e => setForm({ ...form, monto_total: e.target.value })} style={inp} />
++                  </Field>
++                  <Field label="Monto por Cuota (Bs)">
++                    <input type="number" value={form.monto_cuota} onChange={e => setForm({ ...form, monto_cuota: e.target.value })} style={inp} />
++                  </Field>
++                </div>
++                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
++                  <Field label="Nº Cuotas">
++                    <input type="number" value={form.num_cuotas} onChange={e => setForm({ ...form, num_cuotas: e.target.value })} style={inp} />
++                  </Field>
++                  <Field label="Mes Inicio">
++                    <select value={form.mes_inicio} onChange={e => setForm({ ...form, mes_inicio: Number(e.target.value) })} style={inp}>
++                      {MESES.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
++                    </select>
++                  </Field>
++                  <Field label="Año Inicio">
++                    <input type="number" value={form.anio_inicio} onChange={e => setForm({ ...form, anio_inicio: e.target.value })} style={inp} />
++                  </Field>
++                </div>
++              </>
++            )}
++            {form.id && (
++              <Field label="Cuotas Pagadas">
++                <input type="number" min={0} max={form.num_cuotas} value={form.cuotas_pagadas}
++                  onChange={e => setForm({ ...form, cuotas_pagadas: e.target.value })} style={inp} />
++              </Field>
++            )}
++            <Field label="Notas">
++              <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })}
++                style={{ ...inp, height: 60, resize: 'vertical' }} />
++            </Field>
++
++            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
++              <button onClick={() => setForm(null)} style={{ padding: '9px 20px', background: '#eee', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
++                Cancelar
++              </button>
++              <button onClick={guardar} disabled={!form.descripcion}
++                style={{ padding: '9px 20px', background: '#6A1B9A', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
++                Guardar
++              </button>
++            </div>
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
++function Field({ label, children }) {
++  return (
++    <div style={{ marginBottom: 14 }}>
++      <label style={{ display: 'block', fontSize: 13, color: '#555', marginBottom: 4, fontWeight: 500 }}>{label}</label>
++      {children}
++    </div>
++  );
++}
++
++const inp = { width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' };
++const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
++const modal = { background: '#fff', borderRadius: 12, padding: 28, width: 460, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' };
+diff --git a/frontend/src/components/Presupuesto/PartidasAdmin.jsx b/frontend/src/components/Presupuesto/PartidasAdmin.jsx
+new file mode 100644
+index 0000000..af7a3e1
+--- /dev/null
++++ b/frontend/src/components/Presupuesto/PartidasAdmin.jsx
+@@ -0,0 +1,249 @@
++import React, { useState, useEffect } from 'react';
++import api from '../../api';
++
++const TIPOS = [
++  { value: 'fija', label: 'Fija' },
++  { value: 'variable', label: 'Variable' },
++  { value: 'imprevisto', label: 'Imprevisto' },
++  { value: 'cuota', label: 'Cuota' },
++];
++
++const TIPO_COLOR = {
++  fija: '#1565C0',
++  variable: '#2E7D32',
++  imprevisto: '#E65100',
++  cuota: '#6A1B9A',
++};
++
++const PARTIDAS_SEMILLA = [
++  { nombre: 'SERVICIOS ADMINISTRATIVOS', tipo: 'fija', monto_referencia: 210.00, orden: 1 },
++  { nombre: 'IVA 16% HONORARIOS', tipo: 'fija', monto_referencia: 33.60, orden: 2 },
++  { nombre: 'CORPOELEC', tipo: 'variable', monto_referencia: 93.00, orden: 3 },
++  { nombre: 'HIDROCAPITAL', tipo: 'variable', monto_referencia: 1185.00, orden: 4 },
++  { nombre: 'SERV PREVENCION', tipo: 'fija', monto_referencia: 5730.00, orden: 5 },
++  { nombre: 'AREAS VERDES', tipo: 'fija', monto_referencia: 1800.00, orden: 6 },
++  { nombre: 'PISCINA', tipo: 'fija', monto_referencia: 1030.00, orden: 7 },
++  { nombre: 'AREAS COMUNES', tipo: 'fija', monto_referencia: 1400.00, orden: 8 },
++  { nombre: 'ART MAT FERRET ELECT', tipo: 'variable', monto_referencia: 593.00, orden: 9 },
++  { nombre: 'ART MAT LIMPIEZA', tipo: 'variable', monto_referencia: 212.00, orden: 10 },
++  { nombre: 'ART MAT PISCINA', tipo: 'fija', monto_referencia: 2634.00, orden: 11 },
++  { nombre: 'GERENCIA SUPERVISION', tipo: 'fija', monto_referencia: 1400.00, orden: 12 },
++  { nombre: 'HON DECLARAC ISLR', tipo: 'fija', monto_referencia: 30.00, orden: 13 },
++  { nombre: 'SERVICIO INTERNET', tipo: 'fija', monto_referencia: 80.00, orden: 14 },
++  { nombre: 'INFRAESTRUCTURA', tipo: 'fija', monto_referencia: 1510.00, orden: 15 },
++  { nombre: 'ASEO URBANO', tipo: 'fija', monto_referencia: 0.00, orden: 16 },
++  { nombre: 'IMPREVISTOS 1', tipo: 'imprevisto', monto_referencia: null, orden: 17 },
++  { nombre: 'IMPREVISTOS 2', tipo: 'imprevisto', monto_referencia: null, orden: 18 },
++];
++
++function fmt(n) {
++  if (n == null) return '—';
++  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
++}
++
++const EMPTY = { nombre: '', tipo: 'fija', monto_referencia: '', orden: 0, notas: '' };
++
++export default function PartidasAdmin() {
++  const [partidas, setPartidas] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [form, setForm] = useState(null); // null = cerrado, {...} = editando
++  const [sembrando, setSembrando] = useState(false);
++  const [msg, setMsg] = useState('');
++
++  const cargar = async () => {
++    setLoading(true);
++    try {
++      const r = await api.get('/presupuesto/partidas');
++      setPartidas(r.data);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  useEffect(() => { cargar(); }, []);
++
++  const guardar = async () => {
++    const payload = {
++      nombre: form.nombre,
++      tipo: form.tipo,
++      monto_referencia: form.monto_referencia === '' ? null : Number(form.monto_referencia),
++      orden: Number(form.orden) || 0,
++      notas: form.notas || null,
++      activa: form.activa !== false,
++    };
++    try {
++      if (form.id) {
++        await api.put(`/presupuesto/partidas/${form.id}`, payload);
++      } else {
++        await api.post('/presupuesto/partidas', payload);
++      }
++      setForm(null);
++      await cargar();
++    } catch (e) {
++      alert('Error al guardar');
++    }
++  };
++
++  const eliminar = async (id) => {
++    if (!window.confirm('¿Eliminar esta partida?')) return;
++    try {
++      await api.delete(`/presupuesto/partidas/${id}`);
++      await cargar();
++    } catch {
++      alert('No se puede eliminar: tiene gastos o presupuestos asociados');
++    }
++  };
++
++  const sembrar = async () => {
++    if (!window.confirm(`¿Cargar ${PARTIDAS_SEMILLA.length} partidas iniciales? Solo se agregarán las que no existen.`)) return;
++    setSembrando(true);
++    let ok = 0;
++    for (const p of PARTIDAS_SEMILLA) {
++      try {
++        await api.post('/presupuesto/partidas', p);
++        ok++;
++      } catch {}
++    }
++    setSembrando(false);
++    setMsg(`✅ ${ok} partidas cargadas.`);
++    await cargar();
++    setTimeout(() => setMsg(''), 4000);
++  };
++
++  return (
++    <div>
++      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
++        <h3 style={{ margin: 0, color: '#333' }}>Catálogo de Partidas</h3>
++        <div style={{ display: 'flex', gap: 8 }}>
++          {partidas.length === 0 && (
++            <button onClick={sembrar} disabled={sembrando}
++              style={{ padding: '9px 16px', background: '#e8f5e9', color: '#2e7d32', border: '1px solid #2e7d32', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
++              {sembrando ? 'Cargando…' : '📥 Cargar Partidas Iniciales'}
++            </button>
++          )}
++          <button onClick={() => setForm({ ...EMPTY, orden: partidas.length + 1 })}
++            style={{ padding: '9px 16px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
++            + Nueva Partida
++          </button>
++        </div>
++      </div>
++
++      {msg && <div style={{ background: '#e8f5e9', color: '#2e7d32', padding: 10, borderRadius: 6, marginBottom: 12 }}>{msg}</div>}
++
++      {loading ? (
++        <p style={{ color: '#888' }}>Cargando…</p>
++      ) : partidas.length === 0 ? (
++        <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa' }}>
++          <p>No hay partidas. Haz clic en "Cargar Partidas Iniciales" para pre-cargar las del recibo.</p>
++        </div>
++      ) : (
++        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 10, overflow: 'hidden' }}>
++          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
++            <thead>
++              <tr style={{ background: '#f5f5f5' }}>
++                <th style={th}>#</th>
++                <th style={th}>Nombre</th>
++                <th style={th}>Tipo</th>
++                <th style={{ ...th, textAlign: 'right' }}>Monto Ref.</th>
++                <th style={th}>Estado</th>
++                <th style={th}></th>
++              </tr>
++            </thead>
++            <tbody>
++              {partidas.map(p => (
++                <tr key={p.id} style={{ borderBottom: '1px solid #f0f0f0', opacity: p.activa ? 1 : 0.5 }}>
++                  <td style={{ ...td, color: '#999', width: 40 }}>{p.orden}</td>
++                  <td style={td}>
++                    <span style={{ fontWeight: 500 }}>{p.nombre}</span>
++                    {p.notas && <div style={{ fontSize: 11, color: '#888' }}>{p.notas}</div>}
++                  </td>
++                  <td style={td}>
++                    <span style={{ background: TIPO_COLOR[p.tipo] + '18', color: TIPO_COLOR[p.tipo], padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600 }}>
++                      {p.tipo}
++                    </span>
++                  </td>
++                  <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace' }}>
++                    {fmt(p.monto_referencia)}
++                  </td>
++                  <td style={td}>
++                    <span style={{ color: p.activa ? '#2e7d32' : '#999', fontSize: 12 }}>
++                      {p.activa ? '● Activa' : '○ Inactiva'}
++                    </span>
++                  </td>
++                  <td style={{ ...td, textAlign: 'right' }}>
++                    <button onClick={() => setForm({ ...p, monto_referencia: p.monto_referencia ?? '' })}
++                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1a237e', fontSize: 13, marginRight: 8 }}>
++                      ✏️ Editar
++                    </button>
++                    <button onClick={() => eliminar(p.id)}
++                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c62828', fontSize: 13 }}>
++                      🗑
++                    </button>
++                  </td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      )}
++
++      {/* Modal edición */}
++      {form && (
++        <div style={overlay}>
++          <div style={modal}>
++            <h3 style={{ margin: '0 0 20px', color: '#1a237e' }}>{form.id ? 'Editar Partida' : 'Nueva Partida'}</h3>
++            <div style={row}>
++              <label style={label}>Nombre *</label>
++              <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })}
++                style={input} placeholder="Ej: SERV PREVENCION" />
++            </div>
++            <div style={row}>
++              <label style={label}>Tipo *</label>
++              <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={input}>
++                {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
++              </select>
++            </div>
++            <div style={row}>
++              <label style={label}>Monto de Referencia (Bs)</label>
++              <input type="number" value={form.monto_referencia} onChange={e => setForm({ ...form, monto_referencia: e.target.value })}
++                style={input} placeholder="0.00" />
++            </div>
++            <div style={row}>
++              <label style={label}>Orden</label>
++              <input type="number" value={form.orden} onChange={e => setForm({ ...form, orden: e.target.value })}
++                style={input} />
++            </div>
++            <div style={row}>
++              <label style={label}>Notas</label>
++              <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })}
++                style={{ ...input, height: 60, resize: 'vertical' }} />
++            </div>
++            {form.id && (
++              <div style={{ ...row, alignItems: 'center' }}>
++                <label style={label}>Activa</label>
++                <input type="checkbox" checked={form.activa !== false} onChange={e => setForm({ ...form, activa: e.target.checked })} />
++              </div>
++            )}
++            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
++              <button onClick={() => setForm(null)} style={{ padding: '9px 20px', background: '#eee', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
++                Cancelar
++              </button>
++              <button onClick={guardar} disabled={!form.nombre}
++                style={{ padding: '9px 20px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
++                Guardar
++              </button>
++            </div>
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
++
++const th = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 13, color: '#555' };
++const td = { padding: '10px 14px', verticalAlign: 'middle' };
++const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
++const modal = { background: '#fff', borderRadius: 12, padding: 28, width: 420, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' };
++const row = { marginBottom: 14 };
++const label = { display: 'block', fontSize: 13, color: '#555', marginBottom: 4, fontWeight: 500 };
++const input = { width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' };
+diff --git a/frontend/src/components/Presupuesto/PresupuestoDashboard.jsx b/frontend/src/components/Presupuesto/PresupuestoDashboard.jsx
+new file mode 100644
+index 0000000..5bf3609
+--- /dev/null
++++ b/frontend/src/components/Presupuesto/PresupuestoDashboard.jsx
+@@ -0,0 +1,305 @@
++import React, { useState, useEffect, useCallback } from 'react';
++import api from '../../api';
++
++const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
++  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
++
++const TIPO_COLOR = {
++  fija: '#1565C0',
++  variable: '#2E7D32',
++  imprevisto: '#E65100',
++  cuota: '#6A1B9A',
++};
++
++const TIPO_LABEL = {
++  fija: 'Fija',
++  variable: 'Variable',
++  imprevisto: 'Imprevisto',
++  cuota: 'Cuota',
++};
++
++function fmt(n) {
++  if (n == null || n === '') return '—';
++  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
++}
++
++function PctBar({ pct }) {
++  if (pct == null) return <span style={{ color: '#aaa' }}>—</span>;
++  const color = pct > 110 ? '#c62828' : pct > 90 ? '#f57f17' : '#2e7d32';
++  return (
++    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
++      <div style={{ flex: 1, background: '#eee', borderRadius: 4, height: 8, minWidth: 60 }}>
++        <div style={{ width: `${Math.min(pct, 150)}%`, background: color, height: 8, borderRadius: 4, maxWidth: '100%' }} />
++      </div>
++      <span style={{ color, fontWeight: 600, fontSize: 12, minWidth: 38 }}>{pct}%</span>
++    </div>
++  );
++}
++
++export default function PresupuestoDashboard() {
++  const now = new Date();
++  const [anio, setAnio] = useState(now.getFullYear());
++  const [mes, setMes] = useState(now.getMonth() + 1);
++  const [resumen, setResumen] = useState(null);
++  const [lista, setLista] = useState([]);
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState('');
++  const [generando, setGenerando] = useState(false);
++  const [editLinea, setEditLinea] = useState(null); // {id, monto_real, notas}
++  const [metaEdit, setMetaEdit] = useState('');
++  const [editandoMeta, setEditandoMeta] = useState(false);
++
++  const cargarLista = useCallback(async () => {
++    try {
++      const r = await api.get('/presupuesto/');
++      setLista(r.data);
++    } catch {}
++  }, []);
++
++  const cargarResumen = useCallback(async () => {
++    setLoading(true);
++    setError('');
++    try {
++      const r = await api.get(`/presupuesto/${anio}/${mes}/resumen`);
++      setResumen(r.data);
++      setMetaEdit(r.data.meta_por_villa || '');
++    } catch (e) {
++      if (e.response?.status === 404) setResumen(null);
++      else setError('Error al cargar el presupuesto');
++    } finally {
++      setLoading(false);
++    }
++  }, [anio, mes]);
++
++  useEffect(() => {
++    cargarLista();
++  }, [cargarLista]);
++
++  useEffect(() => {
++    cargarResumen();
++  }, [cargarResumen]);
++
++  const generar = async () => {
++    setGenerando(true);
++    try {
++      await api.post(`/presupuesto/generar/${anio}/${mes}`, null, {
++        params: metaEdit ? { meta_por_villa: metaEdit } : {}
++      });
++      await cargarResumen();
++      await cargarLista();
++    } catch (e) {
++      if (e.response?.status === 409) setError('Ya existe un presupuesto para este mes.');
++      else setError('Error al generar el presupuesto');
++    } finally {
++      setGenerando(false);
++    }
++  };
++
++  const guardarReal = async () => {
++    if (!editLinea) return;
++    try {
++      await api.put(`/presupuesto/${resumen.id}/lineas/${editLinea.id}`, {
++        monto_real: editLinea.monto_real === '' ? null : editLinea.monto_real,
++        notas: editLinea.notas,
++      });
++      setEditLinea(null);
++      await cargarResumen();
++    } catch {
++      alert('Error al guardar');
++    }
++  };
++
++  const guardarMeta = async () => {
++    try {
++      await api.put(`/presupuesto/${resumen.id}`, { meta_por_villa: metaEdit || null });
++      setEditandoMeta(false);
++      await cargarResumen();
++    } catch {
++      alert('Error al guardar meta');
++    }
++  };
++
++  const eliminarPresupuesto = async () => {
++    if (!window.confirm('¿Eliminar este presupuesto? Se perderán todos los datos.')) return;
++    try {
++      await api.delete(`/presupuesto/${resumen.id}`);
++      setResumen(null);
++      await cargarLista();
++    } catch {
++      alert('Error al eliminar');
++    }
++  };
++
++  // Calcular el presupuesto seleccionado de la lista
++  const presupuestoEnLista = lista.find(p => p.anio === anio && p.mes === mes);
++
++  return (
++    <div>
++      {/* Selector mes/año */}
++      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
++        <div>
++          <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: 4 }}>Mes</label>
++          <select value={mes} onChange={e => setMes(Number(e.target.value))}
++            style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14 }}>
++            {MESES.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
++          </select>
++        </div>
++        <div>
++          <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: 4 }}>Año</label>
++          <select value={anio} onChange={e => setAnio(Number(e.target.value))}
++            style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14 }}>
++            {[2024, 2025, 2026, 2027].map(a => <option key={a} value={a}>{a}</option>)}
++          </select>
++        </div>
++        <div style={{ marginTop: 20 }}>
++          {!resumen ? (
++            <button onClick={generar} disabled={generando}
++              style={{ padding: '9px 20px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
++              {generando ? 'Generando…' : '⚡ Generar Presupuesto'}
++            </button>
++          ) : (
++            <button onClick={eliminarPresupuesto}
++              style={{ padding: '9px 16px', background: '#fff', color: '#c62828', border: '1px solid #c62828', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
++              🗑 Eliminar
++            </button>
++          )}
++        </div>
++      </div>
++
++      {error && <div style={{ background: '#fff3e0', color: '#e65100', padding: 12, borderRadius: 6, marginBottom: 16 }}>{error}</div>}
++
++      {loading && <p style={{ color: '#888' }}>Cargando…</p>}
++
++      {!loading && !resumen && !error && (
++        <div style={{ textAlign: 'center', padding: '60px 0', color: '#888' }}>
++          <p style={{ fontSize: 48 }}>📋</p>
++          <p>No hay presupuesto para {MESES[mes]} {anio}.</p>
++          <p style={{ fontSize: 13 }}>Haz clic en "Generar Presupuesto" para crearlo automáticamente.</p>
++        </div>
++      )}
++
++      {resumen && (
++        <>
++          {/* Encabezado KPIs */}
++          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
++            <KPICard titulo="Total Presupuestado" valor={`Bs ${fmt(resumen.total_presupuestado)}`} color="#1a237e" />
++            <KPICard titulo="Total Real" valor={`Bs ${fmt(resumen.total_real)}`} color={resumen.total_real > resumen.total_presupuestado ? '#c62828' : '#2e7d32'} />
++            <KPICard titulo="Diferencia" valor={`Bs ${fmt(resumen.diferencia)}`} color={resumen.diferencia > 0 ? '#c62828' : '#2e7d32'} />
++            <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 10, padding: '14px 18px' }}>
++              <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Meta por Villa</div>
++              {editandoMeta ? (
++                <div style={{ display: 'flex', gap: 6 }}>
++                  <input type="number" value={metaEdit} onChange={e => setMetaEdit(e.target.value)}
++                    style={{ width: 90, padding: '4px 8px', border: '1px solid #ccc', borderRadius: 4, fontSize: 14 }} />
++                  <button onClick={guardarMeta} style={{ padding: '4px 10px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>✓</button>
++                  <button onClick={() => setEditandoMeta(false)} style={{ padding: '4px 8px', background: '#eee', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>✕</button>
++                </div>
++              ) : (
++                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
++                  <span style={{ fontWeight: 700, fontSize: 18, color: '#1a237e' }}>Bs {fmt(resumen.meta_por_villa)}</span>
++                  <button onClick={() => setEditandoMeta(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#888' }}>✏️</button>
++                </div>
++              )}
++            </div>
++          </div>
++
++          {/* Tabla de líneas */}
++          <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 10, overflow: 'hidden' }}>
++            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
++              <thead>
++                <tr style={{ background: '#f5f5f5' }}>
++                  <th style={th}>Partida</th>
++                  <th style={th}>Tipo</th>
++                  <th style={{ ...th, textAlign: 'right' }}>Presupuestado</th>
++                  <th style={{ ...th, textAlign: 'right' }}>Real</th>
++                  <th style={{ ...th, textAlign: 'right' }}>Diferencia</th>
++                  <th style={th}>% Ejec.</th>
++                  <th style={th}></th>
++                </tr>
++              </thead>
++              <tbody>
++                {resumen.lineas.map(l => (
++                  <tr key={l.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
++                    <td style={td}>
++                      <span style={{ fontWeight: 500 }}>{l.nombre}</span>
++                      {l.notas && <div style={{ fontSize: 11, color: '#888' }}>{l.notas}</div>}
++                    </td>
++                    <td style={td}>
++                      <span style={{ background: TIPO_COLOR[l.tipo] + '18', color: TIPO_COLOR[l.tipo], padding: '2px 8px', borderRadius: 10, fontSize: 12, fontWeight: 600 }}>
++                        {TIPO_LABEL[l.tipo]}
++                      </span>
++                    </td>
++                    <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace' }}>
++                      {fmt(l.presupuestado)}
++                    </td>
++                    <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace' }}>
++                      {editLinea?.id === l.id ? (
++                        <input
++                          type="number"
++                          value={editLinea.monto_real}
++                          onChange={e => setEditLinea({ ...editLinea, monto_real: e.target.value })}
++                          style={{ width: 90, padding: '3px 6px', border: '1px solid #1a237e', borderRadius: 4, fontFamily: 'monospace', fontSize: 13 }}
++                          autoFocus
++                        />
++                      ) : (
++                        <span style={{ color: l.real > 0 ? '#000' : '#bbb' }}>{l.real > 0 ? fmt(l.real) : '—'}</span>
++                      )}
++                    </td>
++                    <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace', color: l.diferencia > 0 ? '#c62828' : l.diferencia < 0 ? '#2e7d32' : '#888' }}>
++                      {l.real > 0 ? fmt(l.diferencia) : '—'}
++                    </td>
++                    <td style={{ ...td, minWidth: 130 }}>
++                      <PctBar pct={l.pct_ejecucion} />
++                    </td>
++                    <td style={{ ...td, textAlign: 'center' }}>
++                      {editLinea?.id === l.id ? (
++                        <div style={{ display: 'flex', gap: 4 }}>
++                          <button onClick={guardarReal} style={btnSm('#1a237e', '#fff')}>✓</button>
++                          <button onClick={() => setEditLinea(null)} style={btnSm('#eee', '#333')}>✕</button>
++                        </div>
++                      ) : (
++                        <button
++                          onClick={() => setEditLinea({ id: l.id, monto_real: l.real || '', notas: l.notas || '' })}
++                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 15 }}
++                          title="Ingresar monto real"
++                        >✏️</button>
++                      )}
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++              <tfoot>
++                <tr style={{ background: '#e8eaf6', fontWeight: 700 }}>
++                  <td colSpan={2} style={{ ...td }}>TOTAL</td>
++                  <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace' }}>Bs {fmt(resumen.total_presupuestado)}</td>
++                  <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace' }}>Bs {fmt(resumen.total_real)}</td>
++                  <td style={{ ...td, textAlign: 'right', fontFamily: 'monospace', color: resumen.diferencia > 0 ? '#c62828' : '#2e7d32' }}>
++                    Bs {fmt(resumen.diferencia)}
++                  </td>
++                  <td colSpan={2} style={td}></td>
++                </tr>
++              </tfoot>
++            </table>
++          </div>
++
++          <p style={{ fontSize: 12, color: '#aaa', marginTop: 12, textAlign: 'right' }}>
++            {resumen.cerrado ? '🔒 Mes cerrado' : '🔓 Mes abierto — puedes editar los montos reales'}
++          </p>
++        </>
++      )}
++    </div>
++  );
++}
++
++function KPICard({ titulo, valor, color }) {
++  return (
++    <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 10, padding: '14px 18px' }}>
++      <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{titulo}</div>
++      <div style={{ fontWeight: 700, fontSize: 20, color }}>{valor}</div>
++    </div>
++  );
++}
++
++const th = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 13, color: '#555' };
++const td = { padding: '10px 14px', verticalAlign: 'middle' };
++const btnSm = (bg, color) => ({ padding: '3px 10px', background: bg, color, border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600, fontSize: 13 });
+diff --git a/frontend/src/components/Presupuesto/index.jsx b/frontend/src/components/Presupuesto/index.jsx
+new file mode 100644
+index 0000000..2e7df0a
+--- /dev/null
++++ b/frontend/src/components/Presupuesto/index.jsx
+@@ -0,0 +1,47 @@
++import React, { useState } from 'react';
++import PresupuestoDashboard from './PresupuestoDashboard';
++import PartidasAdmin from './PartidasAdmin';
++import CuotasAdmin from './CuotasAdmin';
++
++const TABS = [
++  { key: 'dashboard', label: '📊 Presupuesto Mensual' },
++  { key: 'partidas', label: '📋 Partidas' },
++  { key: 'cuotas', label: '📆 Cuotas a Plazo' },
++];
++
++export default function Presupuesto() {
++  const [tab, setTab] = useState('dashboard');
++
++  return (
++    <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
++      <h2 style={{ marginBottom: 20, color: '#1a237e' }}>💰 Presupuesto Mensual</h2>
++
++      {/* Tabs */}
++      <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '2px solid #e0e0e0', paddingBottom: 0 }}>
++        {TABS.map(t => (
++          <button
++            key={t.key}
++            onClick={() => setTab(t.key)}
++            style={{
++              padding: '10px 20px',
++              border: 'none',
++              background: 'none',
++              cursor: 'pointer',
++              fontWeight: tab === t.key ? 700 : 400,
++              color: tab === t.key ? '#1a237e' : '#555',
++              borderBottom: tab === t.key ? '3px solid #1a237e' : '3px solid transparent',
++              marginBottom: -2,
++              fontSize: 14,
++            }}
++          >
++            {t.label}
++          </button>
++        ))}
++      </div>
++
++      {tab === 'dashboard' && <PresupuestoDashboard />}
++      {tab === 'partidas' && <PartidasAdmin />}
++      {tab === 'cuotas' && <CuotasAdmin />}
++    </div>
++  );
++}
+-- 
+2.43.0
+
+
+From 88fc08a73f4a23da4955ef54a6c58c468a4b482d Mon Sep 17 00:00:00 2001
+From: fdamato-admin <fdamato27@gmail.com>
+Date: Mon, 9 Nov 2026 22:18:43 +0000
+Subject: [PATCH 3/3] =?UTF-8?q?fix:=20recalcular=20estado=20trabajo=20al?=
+ =?UTF-8?q?=20eliminar=20cotizaci=C3=B3n?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Si se eliminan todas las cotizaciones, el trabajo vuelve a
+pendiente_cotizacion. Si quedan cotizaciones, se mantiene
+cotizaciones_recibidas. Estados avanzados (aprobado, en_ejecucion,
+completado, cancelado) no se tocan.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_019gnkJ7zAKXqzLMjeCW8Bef
+---
+ backend/app/api/trabajos.py | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/backend/app/api/trabajos.py b/backend/app/api/trabajos.py
+index 28e5d04..a1ef125 100644
+--- a/backend/app/api/trabajos.py
++++ b/backend/app/api/trabajos.py
+@@ -103,5 +103,15 @@ def eliminar_cotizacion(cotizacion_id: int, db: Session = Depends(get_db)):
+     cotizacion = db.query(Cotizacion).filter(Cotizacion.id == cotizacion_id).first()
+     if not cotizacion:
+         raise HTTPException(status_code=404, detail="Cotización no encontrada")
++    trabajo_id = cotizacion.trabajo_id
+     db.delete(cotizacion)
++    db.flush()
++    # Recalcular estado del trabajo según cotizaciones restantes
++    trabajo = db.query(Trabajo).filter(Trabajo.id == trabajo_id).first()
++    if trabajo and trabajo.estado not in (EstadoTrabajo.aprobado, EstadoTrabajo.en_ejecucion, EstadoTrabajo.completado, EstadoTrabajo.cancelado):
++        restantes = db.query(Cotizacion).filter(Cotizacion.trabajo_id == trabajo_id).count()
++        if restantes == 0:
++            trabajo.estado = EstadoTrabajo.pendiente_cotizacion
++        else:
++            trabajo.estado = EstadoTrabajo.cotizaciones_recibidas
+     db.commit()
+-- 
+2.43.0
+
