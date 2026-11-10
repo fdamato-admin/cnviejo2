@@ -13,7 +13,7 @@ class MovimientoCaja(Base):
     __tablename__ = "caja_chica"
     id = Column(Integer, primary_key=True, index=True)
     tipo = Column(String(30), nullable=False)
-    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    fecha = Column(DateTime(timezone=True), nullable=True)
     monto_usd = Column(Float, nullable=True)
     monto_bs = Column(Float, nullable=True)
     tasa = Column(Float, nullable=True)
@@ -53,13 +53,24 @@ def _ultimo_saldo(db: Session) -> float:
 
 @router.get("/", response_model=List[MovimientoOut])
 def listar_movimientos(db: Session = Depends(get_db), _=Depends(require_permiso("*", NivelPermiso.admin))):
-    return db.query(MovimientoCaja).order_by(MovimientoCaja.id.desc()).all()
+    movs = db.query(MovimientoCaja).order_by(MovimientoCaja.id.desc()).all()
+    result = []
+    for m in movs:
+        d = {
+            "id": m.id, "tipo": m.tipo,
+            "fecha": m.fecha.isoformat() if m.fecha else None,
+            "monto_usd": m.monto_usd, "monto_bs": m.monto_bs, "tasa": m.tasa,
+            "descripcion": m.descripcion, "nota": m.nota,
+            "saldo_usd": m.saldo_usd, "creado_por": m.creado_por,
+        }
+        result.append(d)
+    return result
 
 @router.get("/saldo")
 def obtener_saldo(db: Session = Depends(get_db), _=Depends(require_permiso("*", NivelPermiso.admin))):
     return {"saldo_usd": _ultimo_saldo(db)}
 
-@router.post("/", response_model=MovimientoOut, status_code=201)
+@router.post("/", status_code=201)
 def registrar_movimiento(data: MovimientoIn, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user), _=Depends(require_permiso("*", NivelPermiso.admin))):
     saldo = _ultimo_saldo(db)
     if data.tipo == "saldo_inicial":
@@ -87,22 +98,32 @@ def registrar_movimiento(data: MovimientoIn, db: Session = Depends(get_db), usua
     if data.fecha:
         for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
             try:
-                fecha_dt = datetime.strptime(data.fecha[:len(fmt)], fmt)
+                fecha_dt = datetime.strptime(data.fecha[:19], fmt[:len(data.fecha[:19])])
                 break
             except Exception:
                 continue
+    if fecha_dt is None and data.fecha:
+        try:
+            fecha_dt = datetime.fromisoformat(data.fecha.replace("Z",""))
+        except Exception:
+            fecha_dt = None
     mov = MovimientoCaja(
-        tipo=data.tipo,
-        fecha=fecha_dt,
+        tipo=data.tipo, fecha=fecha_dt,
         monto_usd=data.monto_usd, monto_bs=data.monto_bs, tasa=data.tasa,
         descripcion=data.descripcion, nota=data.nota,
         saldo_usd=round(nuevo_saldo, 2),
-        creado_por=usuario.nombre if usuario else "Sistema"
+        creado_por=usuario.nombre if usuario else "Sistema",
     )
     db.add(mov)
     db.commit()
     db.refresh(mov)
-    return mov
+    return {
+        "id": mov.id, "tipo": mov.tipo,
+        "fecha": mov.fecha.isoformat() if mov.fecha else None,
+        "monto_usd": mov.monto_usd, "monto_bs": mov.monto_bs, "tasa": mov.tasa,
+        "descripcion": mov.descripcion, "nota": mov.nota,
+        "saldo_usd": mov.saldo_usd, "creado_por": mov.creado_por,
+    }
 
 @router.delete("/{mov_id}", status_code=204)
 def eliminar_movimiento(mov_id: int, db: Session = Depends(get_db), _=Depends(require_permiso("*", NivelPermiso.admin))):

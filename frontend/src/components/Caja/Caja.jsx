@@ -2,11 +2,11 @@
 import API from '../../api';
 
 const TIPO_CONFIG = {
-  saldo_inicial: { label: 'Saldo inicial',      color: '#1565c0', bg: '#e3f2fd', signo: '+' },
-  entrada_usd:   { label: 'Entrada USD',         color: '#2e7d32', bg: '#e8f5e9', signo: '+' },
-  compra_usd:    { label: 'Compra USD (Bs->USD)',color: '#6a1b9a', bg: '#f3e5f5', signo: '+' },
-  gasto_usd:     { label: 'Gasto USD',           color: '#c62828', bg: '#fce4ec', signo: '-' },
-  venta_usd:     { label: 'Venta USD (USD->Bs)', color: '#e65100', bg: '#fff3e0', signo: '-' },
+  saldo_inicial: { label: 'Saldo inicial',      color: '#1565c0', bg: '#e3f2fd',  signo: '+' },
+  entrada_usd:   { label: 'Entrada USD',         color: '#2e7d32', bg: '#e8f5e9',  signo: '+' },
+  compra_usd:    { label: 'Compra USD (Bs\u2192USD)', color: '#6a1b9a', bg: '#f3e5f5',  signo: '+' },
+  gasto_usd:     { label: 'Gasto USD',           color: '#c62828', bg: '#fce4ec',  signo: '-' },
+  venta_usd:     { label: 'Venta USD (USD\u2192Bs)',  color: '#e65100', bg: '#fff3e0',  signo: '-' },
 };
 
 function fmt(fecha) {
@@ -23,7 +23,7 @@ function bs(n) {
 }
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const VACIO = { tipo: '', monto_usd: '', monto_bs: '', tasa: '', Concepto: '', nota: '', fecha: hoy() };
+const VACIO = { tipo: '', fecha: hoy(), monto_usd: '', monto_bs: '', tasa: '', descripcion: '', nota: '' };
 
 export default function Caja() {
   const [movs, setMovs] = useState([]);
@@ -36,7 +36,10 @@ export default function Caja() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const [r1, r2] = await Promise.all([API.get('/caja/'), API.get('/caja/saldo')]);
+      const [r1, r2] = await Promise.all([
+        API.get('/caja/'),
+        API.get('/caja/saldo'),
+      ]);
       setMovs(r1.data);
       setSaldo(r2.data.saldo_usd);
     } catch {
@@ -55,18 +58,18 @@ export default function Caja() {
     setError('');
     setGuardando(true);
     try {
-      const payload = { tipo: form.tipo };
+      const payload = { tipo: form.tipo, fecha: form.fecha || hoy() };
       if (form.monto_usd !== '') payload.monto_usd = parseFloat(form.monto_usd);
       if (form.monto_bs !== '')  payload.monto_bs  = parseFloat(form.monto_bs);
       if (form.tasa !== '')      payload.tasa       = parseFloat(form.tasa);
-      if (form.Concepto)      payload.Concepto = form.Concepto;
+      if (form.descripcion)      payload.descripcion = form.descripcion;
       if (form.nota)             payload.nota        = form.nota;
-      if (form.fecha)            payload.fecha       = form.fecha;
       await API.post('/caja/', payload);
       setForm(VACIO);
       await cargar();
     } catch (e) {
-      setError(e?.response?.data?.detail || 'Error al guardar');
+      const msg = e?.response?.data?.detail;
+      setError(typeof msg === 'string' ? msg : JSON.stringify(msg) || 'Error al guardar');
     } finally {
       setGuardando(false);
     }
@@ -88,7 +91,7 @@ export default function Caja() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700 }}>Caja Chica</h1>
-          <p style={{ margin: 0, color: '#888', fontSize: 14 }}>Fondo en dolares — entradas, salidas y conversiones</p>
+          <p style={{ margin: 0, color: '#888', fontSize: 14 }}>Fondo en dolares</p>
         </div>
         <div style={{ background: '#1a3a5c', color: '#fff', borderRadius: 12, padding: '14px 24px', textAlign: 'right' }}>
           <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 2 }}>SALDO ACTUAL</div>
@@ -99,23 +102,27 @@ export default function Caja() {
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 10, padding: 20, marginBottom: 24 }}>
         <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 600 }}>Registrar movimiento</h3>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-          <select value={form.tipo} onChange={e => set('tipo', e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, minWidth: 240 }}>
-            <option value="">— Tipo de movimiento —</option>
-            <option value="saldo_inicial">Saldo inicial (entrega admin anterior)</option>
-            <option value="entrada_usd">Entrada en USD (pago directo)</option>
-            <option value="compra_usd">Compra USD con Bs. (Bs. a USD)</option>
-            <option value="gasto_usd">Gasto pagado en USD</option>
-            <option value="venta_usd">Venta de USD para obtener Bs.</option>
-          </select>
+          <div>
+            <label style={lbl}>Tipo</label>
+            <select value={form.tipo} onChange={e => set('tipo', e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, minWidth: 220 }}>
+              <option value="">-- Tipo de movimiento --</option>
+              <option value="saldo_inicial">Saldo inicial (entrega admin anterior)</option>
+              <option value="entrada_usd">Entrada en USD (pago directo)</option>
+              <option value="compra_usd">Compra USD con Bs. (Bs a USD)</option>
+              <option value="gasto_usd">Gasto pagado en USD</option>
+              <option value="venta_usd">Venta de USD para obtener Bs. (USD a Bs)</option>
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Fecha</label>
+            <input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)}
+              style={{ ...inp, width: 150 }} />
+          </div>
         </div>
+
         {tipo && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-            <div>
-              <label style={lbl}>Fecha</label>
-              <input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)}
-                style={{ ...inp, width: 150 }} />
-            </div>
             {necesitaUsd && (
               <div>
                 <label style={lbl}>Monto USD</label>
@@ -153,17 +160,19 @@ export default function Caja() {
             )}
             <div>
               <label style={lbl}>Concepto</label>
-              <input value={form.Concepto} onChange={e => set('Concepto', e.target.value)}
-                placeholder="Ej: Pago limpieza" style={{ ...inp, width: 220 }} />
+              <input value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
+                placeholder="Ej: Dolares recibidos junta anterior" style={{ ...inp, width: 220 }} />
             </div>
             <div>
               <label style={lbl}>Nota</label>
               <input value={form.nota} onChange={e => set('nota', e.target.value)}
-                placeholder="Opcional" style={{ ...inp, width: 160 }} />
+                placeholder="Opcional" style={{ ...inp, width: 180 }} />
             </div>
           </div>
         )}
+
         {error && <p style={{ color: '#c62828', fontSize: 13, margin: '0 0 10px' }}>{error}</p>}
+
         {tipo && (
           <button onClick={guardar} disabled={guardando}
             style={{ padding: '9px 20px', background: '#1a3a5c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
@@ -172,9 +181,11 @@ export default function Caja() {
         )}
       </div>
 
-      {loading ? <p style={{ color: '#888' }}>Cargando...</p> : movs.length === 0 ? (
+      {loading ? (
+        <p style={{ color: '#888' }}>Cargando...</p>
+      ) : movs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#aaa' }}>
-          <p style={{ fontSize: 40 }}>💵</p>
+          <p style={{ fontSize: 40 }}>&#x1F4B5;</p>
           <p>No hay movimientos registrados.</p>
         </div>
       ) : (
@@ -210,14 +221,14 @@ export default function Caja() {
                     <td style={td}>{m.monto_bs != null ? bs(m.monto_bs) : '-'}</td>
                     <td style={td}>{m.tasa != null ? m.tasa.toLocaleString('es-VE') : '-'}</td>
                     <td style={{ ...td, color: '#555', maxWidth: 200, wordBreak: 'break-word' }}>
-                      {m.Concepto || ''}{m.nota ? <span style={{ color: '#aaa', fontSize: 11 }}> — {m.nota}</span> : ''}
+                      {m.descripcion || ''}{m.nota ? <span style={{ color: '#aaa', fontSize: 11 }}> -- {m.nota}</span> : ''}
                     </td>
                     <td style={{ ...td, fontWeight: 700, color: '#1a3a5c' }}>{usd(m.saldo_usd)}</td>
                     <td style={{ ...td, fontSize: 11, color: '#aaa' }}>{m.creado_por || '-'}</td>
                     <td style={td}>
                       <button onClick={() => eliminar(m.id)}
                         style={{ background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: 13 }}>
-                        X
+                        x
                       </button>
                     </td>
                   </tr>
@@ -235,4 +246,3 @@ const lbl = { display: 'block', fontSize: 11, color: '#888', marginBottom: 4 };
 const inp = { padding: '7px 10px', borderRadius: 7, border: '1px solid #ddd', fontSize: 13, width: 130 };
 const th  = { padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#555' };
 const td  = { padding: '10px 12px', verticalAlign: 'top' };
-
