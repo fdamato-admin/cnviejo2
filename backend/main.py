@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.api import proveedores, trabajos, auth, suministros, respaldos
 from app.api import auditoria
+from app.api import caja
 
 Base.metadata.create_all(bind=engine)
 
@@ -49,6 +50,7 @@ from app.api import pedidos_suministros
 app.include_router(pedidos_suministros.router, prefix="/api")
 app.include_router(respaldos.router, prefix="/api")
 app.include_router(auditoria.router, prefix="/api")
+app.include_router(caja.router, prefix="/api")
 
 @app.on_event("startup")
 def _iniciar_respaldos():

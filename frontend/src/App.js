@@ -7,6 +7,7 @@ import Usuarios from './components/Usuarios/Usuarios';
 import Suministros from './components/Suministros/Suministros';
 import Respaldo from './components/Respaldo/Respaldo';
 import Auditoria from './components/Auditoria/Auditoria';
+import Caja from './components/Caja/Caja';
 
 const TABS = [
   { key: 'trabajos', label: 'Trabajos', modulo: 'trabajos' },
@@ -56,6 +57,12 @@ function AppInner() {
             Auditoria
           </button>
         )}
+        {puede('*', 'admin') && (
+          <button onClick={() => setTab('caja')}
+            style={{ padding: '16px 16px', background: 'none', border: 'none', color: tab === 'caja' ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: tab === 'caja' ? 600 : 400, fontSize: 14, cursor: 'pointer', borderBottom: tab === 'caja' ? '2px solid #fff' : '2px solid transparent' }}>
+            Caja
+          </button>
+        )}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{usuario.nombre}</span>
           <button onClick={logout}
@@ -71,6 +78,7 @@ function AppInner() {
         {tab === 'usuarios' && <Usuarios />}
         {tab === 'respaldo' && <Respaldo />}
         {tab === 'auditoria' && <Auditoria />}
+        {tab === 'caja' && <Caja />}
       </main>
     </div>
   );
