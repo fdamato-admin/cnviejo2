@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Text
 from sqlalchemy.sql import func
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import datetime
 from ..database import get_db, Base
 from ..auth import get_current_user, require_permiso
 from ..models import Usuario, NivelPermiso
@@ -82,9 +83,20 @@ def registrar_movimiento(data: MovimientoIn, db: Session = Depends(get_db), usua
         nuevo_saldo = saldo - data.monto_usd
     else:
         raise HTTPException(400, f"Tipo desconocido: {data.tipo}")
-    mov = MovimientoCaja(tipo=data.tipo, monto_usd=data.monto_usd, monto_bs=data.monto_bs, tasa=data.tasa,
-        descripcion=data.descripcion, nota=data.nota, saldo_usd=round(nuevo_saldo, 2),
-        creado_por=usuario.nombre if usuario else "Sistema")
+    fecha_dt = None
+    if data.fecha:
+        try:
+            fecha_dt = datetime.fromisoformat(data.fecha)
+        except Exception:
+            fecha_dt = None
+    mov = MovimientoCaja(
+        tipo=data.tipo,
+        fecha=fecha_dt,
+        monto_usd=data.monto_usd, monto_bs=data.monto_bs, tasa=data.tasa,
+        descripcion=data.descripcion, nota=data.nota,
+        saldo_usd=round(nuevo_saldo, 2),
+        creado_por=usuario.nombre if usuario else "Sistema"
+    )
     db.add(mov)
     db.commit()
     db.refresh(mov)

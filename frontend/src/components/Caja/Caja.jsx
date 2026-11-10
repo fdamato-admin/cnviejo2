@@ -22,7 +22,8 @@ function bs(n) {
   return 'Bs. ' + Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const VACIO = { tipo: '', monto_usd: '', monto_bs: '', tasa: '', descripcion: '', nota: '' };
+const hoy = () => new Date().toISOString().slice(0, 10);
+const VACIO = { tipo: '', monto_usd: '', monto_bs: '', tasa: '', descripcion: '', nota: '', fecha: hoy() };
 
 export default function Caja() {
   const [movs, setMovs] = useState([]);
@@ -60,6 +61,7 @@ export default function Caja() {
       if (form.tasa !== '')      payload.tasa       = parseFloat(form.tasa);
       if (form.descripcion)      payload.descripcion = form.descripcion;
       if (form.nota)             payload.nota        = form.nota;
+      if (form.fecha)            payload.fecha       = form.fecha;
       await API.post('/caja/', payload);
       setForm(VACIO);
       await cargar();
@@ -109,6 +111,11 @@ export default function Caja() {
         </div>
         {tipo && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div>
+              <label style={lbl}>Fecha</label>
+              <input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)}
+                style={{ ...inp, width: 150 }} />
+            </div>
             {necesitaUsd && (
               <div>
                 <label style={lbl}>Monto USD</label>
