@@ -23,7 +23,7 @@ function bs(n) {
 }
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const VACIO = { tipo: '', monto_usd: '', monto_bs: '', tasa: '', descripcion: '', nota: '', fecha: hoy() };
+const VACIO = { tipo: '', monto_usd: '', monto_bs: '', tasa: '', Concepto: '', nota: '', fecha: hoy() };
 
 export default function Caja() {
   const [movs, setMovs] = useState([]);
@@ -59,7 +59,7 @@ export default function Caja() {
       if (form.monto_usd !== '') payload.monto_usd = parseFloat(form.monto_usd);
       if (form.monto_bs !== '')  payload.monto_bs  = parseFloat(form.monto_bs);
       if (form.tasa !== '')      payload.tasa       = parseFloat(form.tasa);
-      if (form.descripcion)      payload.descripcion = form.descripcion;
+      if (form.Concepto)      payload.Concepto = form.Concepto;
       if (form.nota)             payload.nota        = form.nota;
       if (form.fecha)            payload.fecha       = form.fecha;
       await API.post('/caja/', payload);
@@ -152,9 +152,9 @@ export default function Caja() {
               </div>
             )}
             <div>
-              <label style={lbl}>Descripcion</label>
-              <input value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
-                placeholder="Ej: Pago proveedor limpieza" style={{ ...inp, width: 220 }} />
+              <label style={lbl}>Concepto</label>
+              <input value={form.Concepto} onChange={e => set('Concepto', e.target.value)}
+                placeholder="Ej: Pago limpieza" style={{ ...inp, width: 220 }} />
             </div>
             <div>
               <label style={lbl}>Nota</label>
@@ -187,7 +187,7 @@ export default function Caja() {
                 <th style={th}>USD</th>
                 <th style={th}>Bs.</th>
                 <th style={th}>Tasa</th>
-                <th style={th}>Descripcion</th>
+                <th style={th}>Concepto</th>
                 <th style={th}>Saldo USD</th>
                 <th style={th}>Por</th>
                 <th style={th}></th>
@@ -210,7 +210,7 @@ export default function Caja() {
                     <td style={td}>{m.monto_bs != null ? bs(m.monto_bs) : '-'}</td>
                     <td style={td}>{m.tasa != null ? m.tasa.toLocaleString('es-VE') : '-'}</td>
                     <td style={{ ...td, color: '#555', maxWidth: 200, wordBreak: 'break-word' }}>
-                      {m.descripcion || ''}{m.nota ? <span style={{ color: '#aaa', fontSize: 11 }}> — {m.nota}</span> : ''}
+                      {m.Concepto || ''}{m.nota ? <span style={{ color: '#aaa', fontSize: 11 }}> — {m.nota}</span> : ''}
                     </td>
                     <td style={{ ...td, fontWeight: 700, color: '#1a3a5c' }}>{usd(m.saldo_usd)}</td>
                     <td style={{ ...td, fontSize: 11, color: '#aaa' }}>{m.creado_por || '-'}</td>
@@ -235,3 +235,4 @@ const lbl = { display: 'block', fontSize: 11, color: '#888', marginBottom: 4 };
 const inp = { padding: '7px 10px', borderRadius: 7, border: '1px solid #ddd', fontSize: 13, width: 130 };
 const th  = { padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#555' };
 const td  = { padding: '10px 12px', verticalAlign: 'top' };
+
