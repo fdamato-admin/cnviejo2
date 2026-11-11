@@ -32,7 +32,7 @@ function AppInner() {
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f8' }}>
       <nav style={{ background: '#1a3a5c', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, marginRight: 16, padding: '16px 0' }}>CN Pueblo Viejo 2</span>
+        <img src="/logo.jpg" alt="Logo" style={{ height: 40, marginRight: 12, borderRadius: 4 }} /><span style={{ color: "#fff", fontWeight: 700, fontSize: 16, marginRight: 16, padding: "16px 0" }}>CN Pueblo Viejo 2</span>
         {tabsVisibles.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{ padding: '16px 16px', background: 'none', border: 'none', color: tab === t.key ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: tab === t.key ? 600 : 400, fontSize: 14, cursor: 'pointer', borderBottom: tab === t.key ? '2px solid #fff' : '2px solid transparent' }}>
@@ -91,3 +91,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+
