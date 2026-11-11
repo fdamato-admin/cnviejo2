@@ -2,15 +2,21 @@
 import API from '../../api';
 
 const TIPO_CONFIG = {
-  saldo_inicial: { label: 'Saldo inicial',      color: '#1565c0', bg: '#e3f2fd',  signo: '+' },
-  entrada_usd:   { label: 'Entrada USD',         color: '#2e7d32', bg: '#e8f5e9',  signo: '+' },
-  compra_usd:    { label: 'Compra USD (Bs\u2192USD)', color: '#6a1b9a', bg: '#f3e5f5',  signo: '+' },
-  gasto_usd:     { label: 'Gasto USD',           color: '#c62828', bg: '#fce4ec',  signo: '-' },
-  venta_usd:     { label: 'Venta USD (USD\u2192Bs)',  color: '#e65100', bg: '#fff3e0',  signo: '-' },
+  saldo_inicial: { label: 'Saldo inicial',      color: '#1565c0', bg: '#e3f2fd', signo: '+' },
+  entrada_usd:   { label: 'Entrada USD',         color: '#2e7d32', bg: '#e8f5e9', signo: '+' },
+  compra_usd:    { label: 'Compra USD (Bs->USD)',color: '#6a1b9a', bg: '#f3e5f5', signo: '+' },
+  gasto_usd:     { label: 'Gasto USD',           color: '#c62828', bg: '#fce4ec', signo: '-' },
+  venta_usd:     { label: 'Venta USD (USD->Bs)', color: '#e65100', bg: '#fff3e0', signo: '-' },
 };
 
-function fmt(fecha) { if (!fecha) return "-"; const s = fecha.length > 10 ? fecha : fecha + "T00:00:00"; const d = new Date(s); if (isNaN(d.getTime())) return fecha.slice(0,10); return d.toLocaleDateString("es-VE", { day: "2-digit", month: "2-digit", year: "numeric" }); });
+function fmt(fecha) {
+  if (!fecha) return '-';
+  const parte = fecha.substring(0, 10);
+  const bits = parte.split('-');
+  if (bits.length !== 3) return parte;
+  return bits[2] + '/' + bits[1] + '/' + bits[0];
 }
+
 function usd(n) {
   if (n == null) return '-';
   return '$ ' + Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -34,17 +40,11 @@ export default function Caja() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const [r1, r2] = await Promise.all([
-        API.get('/caja/'),
-        API.get('/caja/saldo'),
-      ]);
+      const [r1, r2] = await Promise.all([API.get('/caja/'), API.get('/caja/saldo')]);
       setMovs(r1.data);
       setSaldo(r2.data.saldo_usd);
-    } catch {
-      setMovs([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setMovs([]); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { cargar(); }, []);
@@ -68,13 +68,11 @@ export default function Caja() {
     } catch (e) {
       const msg = e?.response?.data?.detail;
       setError(typeof msg === 'string' ? msg : JSON.stringify(msg) || 'Error al guardar');
-    } finally {
-      setGuardando(false);
-    }
+    } finally { setGuardando(false); }
   };
 
   const eliminar = async (id) => {
-    if (!window.confirm('Eliminar este movimiento? Se recalcularan los saldos posteriores.')) return;
+    if (!window.confirm('Eliminar este movimiento?')) return;
     await API.delete(`/caja/${id}`);
     await cargar();
   };
@@ -107,9 +105,9 @@ export default function Caja() {
               <option value="">-- Tipo de movimiento --</option>
               <option value="saldo_inicial">Saldo inicial (entrega admin anterior)</option>
               <option value="entrada_usd">Entrada en USD (pago directo)</option>
-              <option value="compra_usd">Compra USD con Bs. (Bs a USD)</option>
+              <option value="compra_usd">Compra USD con Bs.</option>
               <option value="gasto_usd">Gasto pagado en USD</option>
-              <option value="venta_usd">Venta de USD para obtener Bs. (USD a Bs)</option>
+              <option value="venta_usd">Venta de USD para obtener Bs.</option>
             </select>
           </div>
           <div>
@@ -124,53 +122,43 @@ export default function Caja() {
             {necesitaUsd && (
               <div>
                 <label style={lbl}>Monto USD</label>
-                <input type="number" step="0.01" value={form.monto_usd} onChange={e => set('monto_usd', e.target.value)}
-                  placeholder="0.00" style={inp} />
+                <input type="number" step="0.01" value={form.monto_usd} onChange={e => set('monto_usd', e.target.value)} placeholder="0.00" style={inp} />
               </div>
             )}
             {necesitaBs && (
               <div>
                 <label style={lbl}>Monto Bs.</label>
-                <input type="number" step="0.01" value={form.monto_bs} onChange={e => set('monto_bs', e.target.value)}
-                  placeholder="0.00" style={inp} />
+                <input type="number" step="0.01" value={form.monto_bs} onChange={e => set('monto_bs', e.target.value)} placeholder="0.00" style={inp} />
               </div>
             )}
             {necesitaTasa && (
               <div>
                 <label style={lbl}>Tasa (Bs. por USD)</label>
-                <input type="number" step="0.01" value={form.tasa} onChange={e => set('tasa', e.target.value)}
-                  placeholder="0.00" style={inp} />
+                <input type="number" step="0.01" value={form.tasa} onChange={e => set('tasa', e.target.value)} placeholder="0.00" style={inp} />
               </div>
             )}
             {necesitaBs && form.monto_bs && form.tasa && (
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
-                <span style={{ fontSize: 13, color: '#2e7d32', fontWeight: 600 }}>
-                  = {usd(parseFloat(form.monto_bs) / parseFloat(form.tasa))}
-                </span>
+                <span style={{ fontSize: 13, color: '#2e7d32', fontWeight: 600 }}>= {usd(parseFloat(form.monto_bs) / parseFloat(form.tasa))}</span>
               </div>
             )}
             {tipo === 'venta_usd' && form.monto_usd && form.tasa && (
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
-                <span style={{ fontSize: 13, color: '#e65100', fontWeight: 600 }}>
-                  = {bs(parseFloat(form.monto_usd) * parseFloat(form.tasa))}
-                </span>
+                <span style={{ fontSize: 13, color: '#e65100', fontWeight: 600 }}>= {bs(parseFloat(form.monto_usd) * parseFloat(form.tasa))}</span>
               </div>
             )}
             <div>
               <label style={lbl}>Concepto</label>
-              <input value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
-                placeholder="Ej: Dolares recibidos junta anterior" style={{ ...inp, width: 220 }} />
+              <input value={form.descripcion} onChange={e => set('descripcion', e.target.value)} placeholder="Concepto" style={{ ...inp, width: 220 }} />
             </div>
             <div>
               <label style={lbl}>Nota</label>
-              <input value={form.nota} onChange={e => set('nota', e.target.value)}
-                placeholder="Opcional" style={{ ...inp, width: 180 }} />
+              <input value={form.nota} onChange={e => set('nota', e.target.value)} placeholder="Opcional" style={{ ...inp, width: 180 }} />
             </div>
           </div>
         )}
 
         {error && <p style={{ color: '#c62828', fontSize: 13, margin: '0 0 10px' }}>{error}</p>}
-
         {tipo && (
           <button onClick={guardar} disabled={guardando}
             style={{ padding: '9px 20px', background: '#1a3a5c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
@@ -179,9 +167,7 @@ export default function Caja() {
         )}
       </div>
 
-      {loading ? (
-        <p style={{ color: '#888' }}>Cargando...</p>
-      ) : movs.length === 0 ? (
+      {loading ? <p style={{ color: '#888' }}>Cargando...</p> : movs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#aaa' }}>
           <p style={{ fontSize: 40 }}>&#x1F4B5;</p>
           <p>No hay movimientos registrados.</p>
@@ -191,15 +177,9 @@ export default function Caja() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f5f5f5' }}>
-                <th style={th}>Fecha</th>
-                <th style={th}>Tipo</th>
-                <th style={th}>USD</th>
-                <th style={th}>Bs.</th>
-                <th style={th}>Tasa</th>
-                <th style={th}>Concepto</th>
-                <th style={th}>Saldo USD</th>
-                <th style={th}>Por</th>
-                <th style={th}></th>
+                <th style={th}>Fecha</th><th style={th}>Tipo</th><th style={th}>USD</th>
+                <th style={th}>Bs.</th><th style={th}>Tasa</th><th style={th}>Concepto</th>
+                <th style={th}>Saldo USD</th><th style={th}>Por</th><th style={th}></th>
               </tr>
             </thead>
             <tbody>
@@ -209,9 +189,7 @@ export default function Caja() {
                   <tr key={m.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                     <td style={{ ...td, fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>{fmt(m.fecha)}</td>
                     <td style={td}>
-                      <span style={{ background: cfg.bg, color: cfg.color, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        {cfg.label}
-                      </span>
+                      <span style={{ background: cfg.bg, color: cfg.color, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{cfg.label}</span>
                     </td>
                     <td style={{ ...td, fontWeight: 600, color: cfg.signo === '+' ? '#2e7d32' : '#c62828' }}>
                       {m.monto_usd != null ? `${cfg.signo} ${usd(m.monto_usd)}` : '-'}
@@ -224,10 +202,7 @@ export default function Caja() {
                     <td style={{ ...td, fontWeight: 700, color: '#1a3a5c' }}>{usd(m.saldo_usd)}</td>
                     <td style={{ ...td, fontSize: 11, color: '#aaa' }}>{m.creado_por || '-'}</td>
                     <td style={td}>
-                      <button onClick={() => eliminar(m.id)}
-                        style={{ background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: 13 }}>
-                        x
-                      </button>
+                      <button onClick={() => eliminar(m.id)} style={{ background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: 13 }}>x</button>
                     </td>
                   </tr>
                 );
@@ -244,4 +219,3 @@ const lbl = { display: 'block', fontSize: 11, color: '#888', marginBottom: 4 };
 const inp = { padding: '7px 10px', borderRadius: 7, border: '1px solid #ddd', fontSize: 13, width: 130 };
 const th  = { padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#555' };
 const td  = { padding: '10px 12px', verticalAlign: 'top' };
-
