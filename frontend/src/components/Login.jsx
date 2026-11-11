@@ -26,7 +26,7 @@ export default function Login() {
     <div style={{ minHeight: '100vh', background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: '#fff', borderRadius: 16, padding: 40, width: '100%', maxWidth: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>🏢</div>
+          <img src="/logo.jpg" alt="Logo" style={{ width: 120, marginBottom: 8 }} />
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a3a5c' }}>CN Pueblo Viejo 2</h1>
           <p style={{ margin: '4px 0 0', color: '#888', fontSize: 14 }}>Sistema de Gestion</p>
         </div>
@@ -53,3 +53,4 @@ export default function Login() {
     </div>
   );
 }
+
