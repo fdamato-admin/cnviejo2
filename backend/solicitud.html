@@ -32,9 +32,9 @@
   .pago-opts { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
   .pago-opts label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; color: #333; margin-top: 0; cursor: pointer; }
   .pago-opts input[type=checkbox] { width: auto; }
-  .readonly-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  .readonly-table th { background: #f0f4f8; padding: 8px 10px; text-align: left; font-size: 12px; color: #555; }
-  .readonly-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+  .readonly-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; table-layout: fixed; overflow-x: auto; display: block; }
+  .readonly-table th { background: #f0f4f8; padding: 6px 6px; text-align: left; font-size: 11px; color: #555; }
+  .readonly-table td { padding: 6px 6px; border-bottom: 1px solid #f0f0f0; }
   .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
   #tabla-proveedor-wrap { display: none; }
   .info-box { background: #e8f0fe; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #1a3a5c; margin-bottom: 16px; }
@@ -118,7 +118,7 @@
 
     <div id="tabla-proveedor-wrap">
       <table class="readonly-table" id="tabla-precios">
-        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Tasa Bs./USD</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
+        <thead><tr><th>#</th><th>Descripción</th><th>Cant.</th><th>Und.</th><th>Producto ofrecido</th><th>P.Unit USD</th><th>Tasa</th><th>P.Unit Bs.</th><th>Subtotal</th></tr></thead>
         <tbody id="tbody-precios"></tbody>
       </table>
     </div>
