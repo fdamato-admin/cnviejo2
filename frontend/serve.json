@@ -1,4 +1,7 @@
-{
+﻿{
+  "rewrites": [
+    { "source": "/solicitud.html", "destination": "/solicitud.html" }
+  ],
   "headers": [
     {
       "source": "index.html",
