@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import { UNIDADES } from './SuministroForm';
 import UnidadCombo from './UnidadCombo';
@@ -12,7 +12,7 @@ const estiloLabel = { display: 'block', fontSize: 13, fontWeight: 500, color: '#
 const btn = { padding: '5px 12px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer', color: '#444' };
 
 function formatFecha(fecha) {
-  if (!fecha) return '—';
+  if (!fecha) return 'â€”';
   const [y, m, d] = fecha.split('-');
   return `${d}/${m}/${y}`;
 }
@@ -61,9 +61,9 @@ export default function PedidosSuministros({ onComprar }) {
 
   const textoFrecuencia = (nombre) => {
     const f = frecuencias[(nombre || '').trim().toUpperCase()];
-    if (!f || f.promedio_dias === null || f.promedio_dias === undefined) return 'Sin datos aún';
+    if (!f || f.promedio_dias === null || f.promedio_dias === undefined) return 'Sin datos aÃºn';
     const d = Math.round(f.promedio_dias);
-    return `Cada ${d} día${d !== 1 ? 's' : ''} (${f.compras} compras)`;
+    return `Cada ${d} dÃ­a${d !== 1 ? 's' : ''} (${f.compras} compras)`;
   };
 
   const abrirNuevo = () => {
@@ -135,7 +135,7 @@ export default function PedidosSuministros({ onComprar }) {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Pedido de Suministros</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#777' }}>
-            {pedidos.length} línea{pedidos.length !== 1 ? 's' : ''} {filtro ? filtro.toLowerCase() + (pedidos.length !== 1 ? 's' : '') : 'en total'}
+            {pedidos.length} lÃ­nea{pedidos.length !== 1 ? 's' : ''} {filtro ? filtro.toLowerCase() + (pedidos.length !== 1 ? 's' : '') : 'en total'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -144,6 +144,10 @@ export default function PedidosSuministros({ onComprar }) {
             <option value="">Todos</option>
             {ESTADOS.map(e => <option key={e} value={e}>{e}s</option>)}
           </select>
+          <button onClick={() => window.open('https://incandescent-cannoli-424e62.netlify.app', '_blank')}
+            style={{ padding: '10px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+            📋 Solicitud de Materiales
+          </button>
           <button onClick={abrirNuevo}
             style={{ padding: '10px 20px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
             + Agregar al pedido
@@ -174,8 +178,8 @@ export default function PedidosSuministros({ onComprar }) {
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(p.fecha_pedido)}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 500 }}>{p.nombre}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600 }}>{p.cantidad}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{p.unidad || '—'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{p.nota || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{p.unidad || 'â€”'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{p.nota || 'â€”'}</td>
                   <td style={{ padding: '10px 14px' }}>
                     <span style={{
                       background: p.estado === 'Comprado' ? '#e8f6ec' : '#fff4e0',
@@ -202,8 +206,8 @@ export default function PedidosSuministros({ onComprar }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{editando ? 'Editar línea del pedido' : 'Agregar al pedido'}</h2>
-              <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888' }}>×</button>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{editando ? 'Editar lÃ­nea del pedido' : 'Agregar al pedido'}</h2>
+              <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888' }}>Ã—</button>
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -260,9 +264,9 @@ export default function PedidosSuministros({ onComprar }) {
       {confirmEliminar && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, maxWidth: 420, width: '100%' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>¿Eliminar esta línea?</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>Â¿Eliminar esta lÃ­nea?</h3>
             <p style={{ color: '#555', fontSize: 14, marginBottom: 24 }}>
-              Se eliminará <strong>{confirmEliminar.nombre}</strong> del pedido.
+              Se eliminarÃ¡ <strong>{confirmEliminar.nombre}</strong> del pedido.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmEliminar(null)} style={{ padding: '10px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
@@ -274,3 +278,4 @@ export default function PedidosSuministros({ onComprar }) {
     </div>
   );
 }
+
