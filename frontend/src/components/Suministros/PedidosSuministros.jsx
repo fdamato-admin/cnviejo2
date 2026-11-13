@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import { UNIDADES } from './SuministroForm';
 import UnidadCombo from './UnidadCombo';
@@ -144,7 +144,7 @@ export default function PedidosSuministros({ onComprar }) {
             <option value="">Todos</option>
             {ESTADOS.map(e => <option key={e} value={e}>{e}s</option>)}
           </select>
-          <button onClick={() => window.open('https://loving-perfection-production-c3ac.up.railway.app/solicitud.html', '_blank')}
+          <button onClick={() => window.open('https://cnviejo2-production-46d5.up.railway.app/solicitud', '_blank')}
             style={{ padding: '10px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
             📋 Solicitud de Materiales
           </button>
