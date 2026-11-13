@@ -8,4 +8,5 @@ router = APIRouter()
 def get_solicitud():
     path = os.path.join(os.path.dirname(__file__), '..', '..', 'solicitud.html')
     with open(os.path.abspath(path), 'r', encoding='utf-8') as f:
-        return f.read()
+        content = f.read()
+    return HTMLResponse(content=content, media_type='text/html; charset=utf-8')
