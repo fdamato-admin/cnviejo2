@@ -65,14 +65,14 @@
   <p class="sub">Complete los campos y presione enviar</p>
 
   <div class="mode-tabs">
-    <button class="mode-tab active" onclick="setMode('contratista')">ðŸ“‹ Soy el Solicitante</button>
-    <button class="mode-tab" onclick="setMode('proveedor')">ðŸ’¼ Soy el Proveedor</button>
+    <button class="mode-tab active" onclick="setMode('contratista')">📋 Soy el Solicitante</button>
+    <button class="mode-tab" onclick="setMode('proveedor')">💼 Soy el Proveedor</button>
   </div>
 
   <!-- PANEL CONTRATISTA -->
   <div id="panel-contratista" class="panel active">
-    <label>DescripciÃ³n general del trabajo / obra</label>
-    <input type="text" id="obra" placeholder="Ej: ReparaciÃ³n de techo Ã¡rea comÃºn" />
+    <label>Descripción general del trabajo / obra</label>
+    <input type="text" id="obra" placeholder="Ej: Reparación de techo área común" />
 
     <label>Fecha requerida de entrega</label>
     <input type="date" id="fecha-req" />
@@ -82,42 +82,42 @@
 
     <div class="section-title">Listado de materiales</div>
     <div class="items-header">
-      <span>DescripciÃ³n</span><span>Cantidad</span><span>Unidad</span><span></span>
+      <span>Descripción</span><span>Cantidad</span><span>Unidad</span><span></span>
     </div>
     <div id="items-list"></div>
-    <button class="btn-add" onclick="addItem()">+ Agregar Ã­tem</button>
+    <button class="btn-add" onclick="addItem()">+ Agregar ítem</button>
 
-    <button class="btn-send" onclick="abrirModalProveedores()">ðŸ“± Enviar solicitud a proveedores</button>
+    <button class="btn-send" onclick="abrirModalProveedores()">📱 Enviar solicitud a proveedores</button>
   </div>
 
-  <!-- MODAL SELECCIÃ“N PROVEEDORES -->
+  <!-- MODAL SELECCIÓN PROVEEDORES -->
   <div id="modal-proveedores" class="modal-overlay">
     <div class="modal-box">
       <h2>Seleccionar proveedores</h2>
-      <p>Seleccione los proveedores a quienes desea enviar esta solicitud de cotizaciÃ³n. Se abrirÃ¡ WhatsApp para cada uno.</p>
+      <p>Seleccione los proveedores a quienes desea enviar esta solicitud de cotización. Se abrirá WhatsApp para cada uno.</p>
       <div id="lista-proveedores"><div class="loading-prov">Cargando proveedores...</div></div>
       <div class="modal-actions">
         <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
-        <button class="btn-modal-send" id="btn-enviar-prov" onclick="enviarAProveedores()" disabled>ðŸ“± Enviar por WhatsApp</button>
+        <button class="btn-modal-send" id="btn-enviar-prov" onclick="enviarAProveedores()" disabled>📱 Enviar por WhatsApp</button>
       </div>
     </div>
   </div>
 
   <!-- PANEL PROVEEDOR -->
   <div id="panel-proveedor" class="panel">
-    <div class="info-box">Complete los precios y condiciones, luego presione <strong>Enviar cotizaciÃ³n</strong>.</div>
+    <div class="info-box">Complete los precios y condiciones, luego presione <strong>Enviar cotización</strong>.</div>
 
     <label>Nombre / Empresa</label>
-    <input type="text" id="prov-nombre" placeholder="Nombre o razÃ³n social" />
+    <input type="text" id="prov-nombre" placeholder="Nombre o razón social" />
 
-    <label>TelÃ©fono de contacto</label>
+    <label>Teléfono de contacto</label>
     <input type="tel" id="prov-tel" placeholder="+58 412 000 0000" />
 
     <label>Validez de la oferta</label>
-    <input type="text" id="prov-validez" placeholder="Ej: 3 dÃ­as hÃ¡biles" />
+    <input type="text" id="prov-validez" placeholder="Ej: 3 días hábiles" />
 
     <label>Tiempo de entrega</label>
-    <input type="text" id="prov-entrega" placeholder="Ej: 48 horas despuÃ©s de aprobaciÃ³n" />
+    <input type="text" id="prov-entrega" placeholder="Ej: 48 horas después de aprobación" />
 
     <label>Condiciones de pago</label>
     <div class="pago-opts">
@@ -127,12 +127,12 @@
 
     </div>
 
-    <div class="section-title">Datos bancarios (en caso de aprobaciÃ³n)</div>
+    <div class="section-title">Datos bancarios (en caso de aprobación)</div>
     <label>Banco</label>
     <input type="text" id="prov-banco" placeholder="Ej: Banesco, Mercantil, Bod..." />
     <label>Titular de la cuenta</label>
     <input type="text" id="prov-titular" placeholder="Nombre completo del titular" />
-    <label>NÂ° de cuenta</label>
+    <label>N° de cuenta</label>
     <input type="text" id="prov-cuenta" placeholder="Ej: 0134-0000-00-0000000000" />
     <label>Tipo de cuenta</label>
     <select id="prov-tipo-cuenta">
@@ -140,16 +140,16 @@
       <option>Corriente</option>
       <option>Ahorro</option>
     </select>
-    <label>RIF / CÃ©dula</label>
+    <label>RIF / Cédula</label>
     <input type="text" id="prov-rif" placeholder="Ej: J-12345678-9 o V-12345678" />
     <label style="margin-top:14px">Observaciones del proveedor (opcional)</label>
     <textarea id="prov-obs" placeholder="Condiciones especiales, disponibilidad, etc."></textarea>
 
-    <div class="section-title">Precios por Ã­tem</div>
+    <div class="section-title">Precios por ítem</div>
 
     <div id="tabla-proveedor-wrap">
       <table class="readonly-table" id="tabla-precios">
-        <thead><tr><th>#</th><th>DescripciÃ³n solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentaciÃ³n)</th><th>Precio unit. (USD)</th><th>Tasa Bs./USD</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
+        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Tasa Bs./USD</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
         <tbody id="tbody-precios"></tbody>
       </table>
     </div>
@@ -158,20 +158,20 @@
 
     <div id="resumen-total" style="display:none;background:#1a3a5c;color:#fff;border-radius:10px;padding:14px 18px;margin-top:16px;text-align:right">
       <span style="font-size:13px;opacity:0.8">SUBTOTAL USD</span><br>
-      <span id="total-usd" style="font-size:22px;font-weight:700">`$0.00</span>
+      <span id="total-usd" style="font-size:22px;font-weight:700">$0.00</span>
       <div id="iva-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
         <span style="font-size:13px;opacity:0.8">IVA 16%</span><br>
-        <span id="iva-usd" style="font-size:16px;font-weight:600">`$0.00</span>
+        <span id="iva-usd" style="font-size:16px;font-weight:600">$0.00</span>
       </div>
       <div id="total-final-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
         <span style="font-size:13px;opacity:0.8">TOTAL CON IVA USD</span><br>
-        <span id="total-final-usd" style="font-size:24px;font-weight:700">`$0.00</span>
+        <span id="total-final-usd" style="font-size:24px;font-weight:700">$0.00</span>
       </div>
     </div>
-    <button class="btn-send" onclick="enviarProveedor()">Preparar cotizaciÃ³n</button>
+    <button class="btn-send" onclick="enviarProveedor()">Preparar cotización</button>
     <div id="envio-prov-opts" style="display:none;gap:10px;margin-top:12px;flex-wrap:wrap">
-      <button id="btn-email-prov" class="btn-send" style="background:#1a3a5c;flex:1">ðŸ“§ Enviar por Email</button>
-      <button id="btn-wa-prov" class="btn-send" style="background:#25d366;flex:1">ðŸ“± Enviar por WhatsApp</button>
+      <button id="btn-email-prov" class="btn-send" style="background:#1a3a5c;flex:1">📧 Enviar por Email</button>
+      <button id="btn-wa-prov" class="btn-send" style="background:#25d366;flex:1">📱 Enviar por WhatsApp</button>
     </div>
   </div>
 </div>
@@ -180,7 +180,7 @@
 const CORREO_JUNTA = 'ferdama27@gmail.com';
 const WHATSAPP_JUNTA = '584140213991';
 let itemCount = 0;
-let itemsData = []; // para pasar de contratista a proveedor vÃ­a URL
+let itemsData = []; // para pasar de contratista a proveedor vía URL
 
 function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
@@ -196,22 +196,22 @@ function addItem(desc='', cant='', unit='') {
   const div = document.createElement('div');
   div.className = 'item-row';
   div.id = 'item-' + id;
-  div.innerHTML = ``
-    <input type="text" placeholder="DescripciÃ³n del material" value="`${desc}" id="desc-`${id}">
-    <input type="number" placeholder="0" min="0" value="`${cant}" id="cant-`${id}">
-    <select id="unit-`${id}">
-      <option value="und" `${unit==='und'?'selected':''}>und</option>
-      <option value="mÂ²" `${unit==='mÂ²'?'selected':''}>mÂ²</option>
-      <option value="ml" `${unit==='ml'?'selected':''}>ml</option>
-      <option value="kg" `${unit==='kg'?'selected':''}>kg</option>
-      <option value="lt" `${unit==='lt'?'selected':''}>lt</option>
-      <option value="saco" `${unit==='saco'?'selected':''}>saco</option>
-      <option value="rollo" `${unit==='rollo'?'selected':''}>rollo</option>
-      <option value="caja" `${unit==='caja'?'selected':''}>caja</option>
-      <option value="global" `${unit==='global'?'selected':''}>global</option>
+  div.innerHTML = `
+    <input type="text" placeholder="Descripción del material" value="${desc}" id="desc-${id}">
+    <input type="number" placeholder="0" min="0" value="${cant}" id="cant-${id}">
+    <select id="unit-${id}">
+      <option value="und" ${unit==='und'?'selected':''}>und</option>
+      <option value="m²" ${unit==='m²'?'selected':''}>m²</option>
+      <option value="ml" ${unit==='ml'?'selected':''}>ml</option>
+      <option value="kg" ${unit==='kg'?'selected':''}>kg</option>
+      <option value="lt" ${unit==='lt'?'selected':''}>lt</option>
+      <option value="saco" ${unit==='saco'?'selected':''}>saco</option>
+      <option value="rollo" ${unit==='rollo'?'selected':''}>rollo</option>
+      <option value="caja" ${unit==='caja'?'selected':''}>caja</option>
+      <option value="global" ${unit==='global'?'selected':''}>global</option>
     </select>
-    <button class="btn-del" onclick="removeItem(`${id})">Ã—</button>
-  ``;
+    <button class="btn-del" onclick="removeItem(${id})">×</button>
+  `;
   document.getElementById('items-list').appendChild(div);
 }
 
@@ -241,27 +241,27 @@ function buildSolicitudData() {
   const items = getItems();
 
   if (!obra) { alert('Indique el trabajo / obra.'); return null; }
-  if (items.length === 0) { alert('Agregue al menos un Ã­tem.'); return null; }
+  if (items.length === 0) { alert('Agregue al menos un ítem.'); return null; }
 
   const fecha = new Date().toLocaleDateString('es-VE');
   let tabla = '';
   items.forEach((it, i) => {
-    tabla += ```${i+1}. `${it.desc} â€” `${it.cant} `${it.unit}\n``;
+    tabla += `${i+1}. ${it.desc} — ${it.cant} ${it.unit}\n`;
   });
 
-  const paramsItems = items.map(it => ``i=`${encodeURIComponent(it.desc+'|'+it.cant+'|'+it.unit)}``).join('&');
+  const paramsItems = items.map(it => `i=${encodeURIComponent(it.desc+'|'+it.cant+'|'+it.unit)}`).join('&');
   const urlProv = window.location.href.split('?')[0] + '?modo=proveedor&obra=' + encodeURIComponent(obra) + '&' + paramsItems;
 
-  let cuerpo = ``SOLICITUD DE MATERIALES\n``;
-  cuerpo += ``Fecha: `${fecha}\n``;
-  cuerpo += ``Trabajo / Obra: `${obra}\n``;
-  if (fechaReq) cuerpo += ``Fecha requerida de entrega: `${fechaReq}\n``;
-  cuerpo += ``\nLISTA DE MATERIALES:\n``;
-  cuerpo += ``â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n``;
+  let cuerpo = `SOLICITUD DE MATERIALES\n`;
+  cuerpo += `Fecha: ${fecha}\n`;
+  cuerpo += `Trabajo / Obra: ${obra}\n`;
+  if (fechaReq) cuerpo += `Fecha requerida de entrega: ${fechaReq}\n`;
+  cuerpo += `\nLISTA DE MATERIALES:\n`;
+  cuerpo += `─────────────────────────────\n`;
   cuerpo += tabla;
-  cuerpo += ``â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n``;
-  if (obs) cuerpo += ``\nObservaciones: `${obs}\n``;
-  cuerpo += ``\nPara cotizar, abra este enlace:\n`${urlProv}``;
+  cuerpo += `─────────────────────────────\n`;
+  if (obs) cuerpo += `\nObservaciones: ${obs}\n`;
+  cuerpo += `\nPara cotizar, abra este enlace:\n${urlProv}`;
 
   return { obra, fecha, cuerpo, urlProv };
 }
@@ -273,7 +273,7 @@ async function abrirModalProveedores() {
 
   document.getElementById('modal-proveedores').classList.add('open');
   document.getElementById('btn-enviar-prov').disabled = true;
-  document.getElementById('lista-proveedores').innerHTML = '<div class="loading-prov">â³ Cargando proveedores...</div>';
+  document.getElementById('lista-proveedores').innerHTML = '<div class="loading-prov">⏳ Cargando proveedores...</div>';
 
   try {
     const res = await fetch('https://cnviejo2-production-46d5.up.railway.app/api/proveedores/?estado=activo');
@@ -290,19 +290,19 @@ async function abrirModalProveedores() {
       const nombre = p.nombre || '';
       const empresa = p.empresa || '';
       const tel = p.telefono || p.telefono_alt || '';
-      html += ``
-        <label class="prov-check-item" for="pchk-`${idx}">
-          <input type="checkbox" id="pchk-`${idx}" data-tel="`${tel}" data-nombre="`${nombre}" onchange="actualizarBtnEnviar()">
+      html += `
+        <label class="prov-check-item" for="pchk-${idx}">
+          <input type="checkbox" id="pchk-${idx}" data-tel="${tel}" data-nombre="${nombre}" onchange="actualizarBtnEnviar()">
           <div class="prov-info">
-            <strong>`${empresa || nombre}</strong>
-            <span>`${empresa ? nombre + ' Â· ' : ''}`${tel || 'Sin telÃ©fono'}</span>
+            <strong>${empresa || nombre}</strong>
+            <span>${empresa ? nombre + ' · ' : ''}${tel || 'Sin teléfono'}</span>
           </div>
-        </label>``;
+        </label>`;
     });
     document.getElementById('lista-proveedores').innerHTML = html;
   } catch(e) {
     document.getElementById('lista-proveedores').innerHTML =
-      ``<div class="loading-prov" style="color:#e53935">Error al cargar proveedores.<br><small>`${e.message}</small></div>``;
+      `<div class="loading-prov" style="color:#e53935">Error al cargar proveedores.<br><small>${e.message}</small></div>`;
   }
 }
 
@@ -310,8 +310,8 @@ function actualizarBtnEnviar() {
   const checks = document.querySelectorAll('#lista-proveedores input[type=checkbox]:checked');
   document.getElementById('btn-enviar-prov').disabled = checks.length === 0;
   document.getElementById('btn-enviar-prov').textContent = checks.length
-    ? ``ðŸ“± Enviar por WhatsApp (`${checks.length})``
-    : 'ðŸ“± Enviar por WhatsApp';
+    ? `📱 Enviar por WhatsApp (${checks.length})`
+    : '📱 Enviar por WhatsApp';
 }
 
 function cerrarModal() {
@@ -328,21 +328,21 @@ function enviarAProveedores() {
   checks.forEach((chk, i) => {
     const tel = chk.dataset.tel.replace(/[^\d]/g, '');
     if (!tel) return;
-    // PequeÃ±o delay entre ventanas para que el navegador no las bloquee
+    // Pequeño delay entre ventanas para que el navegador no las bloquee
     setTimeout(() => {
-      window.open(``https://wa.me/`${tel}?text=`${encodeURIComponent(cuerpo)}``, '_blank');
+      window.open(`https://wa.me/${tel}?text=${encodeURIComponent(cuerpo)}`, '_blank');
     }, i * 600);
   });
 
   cerrarModal();
 }
 
-// Mantener envÃ­o por email a la junta tambiÃ©n (como opciÃ³n secundaria)
+// Mantener envío por email a la junta también (como opción secundaria)
 function enviarContratista() {
   const data = buildSolicitudData();
   if (!data) return;
-  const asunto = ``Solicitud de materiales â€” `${data.obra} â€” `${data.fecha}``;
-  window.location.href = ``mailto:`${CORREO_JUNTA}?subject=`${encodeURIComponent(asunto)}&body=`${encodeURIComponent(data.cuerpo)}``;
+  const asunto = `Solicitud de materiales — ${data.obra} — ${data.fecha}`;
+  window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(data.cuerpo)}`;
 }
 
 function loadItemsFromURL() {
@@ -353,22 +353,22 @@ function loadItemsFromURL() {
   if (!iParams.length) {
     document.getElementById('tabla-proveedor-wrap').style.display = 'block';
     document.getElementById('items-prov-manual').style.display = 'none';
-    // Generar tabla vacÃ­a con 5 filas para llenar manualmente
+    // Generar tabla vacía con 5 filas para llenar manualmente
     const tbody = document.getElementById('tbody-precios');
     tbody.innerHTML = '';
     for (let idx = 0; idx < 5; idx++) {
       const tr = document.createElement('tr');
-      tr.innerHTML = ``
-        <td>`${idx+1}</td>
-        <td><input type="text" placeholder="DescripciÃ³n solicitada" id="desc-prov-`${idx}" style="width:140px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" placeholder="0" id="cant-prov-`${idx}" oninput="recalcRowManual(`${idx})" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="text" placeholder="und" id="unit-prov-`${idx}" style="width:50px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="text" placeholder="Marca alternativa" id="alt-`${idx}" style="width:130px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-`${idx}" oninput="recalcRowManual(`${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-`${idx}" oninput="recalcRowManual(`${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td id="bs-`${idx}" style="font-size:12px;color:#555;white-space:nowrap">â€”</td>
-        <td id="sub-`${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">â€”</td>
-      ``;
+      tr.innerHTML = `
+        <td>${idx+1}</td>
+        <td><input type="text" placeholder="Descripción solicitada" id="desc-prov-${idx}" style="width:140px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+        <td><input type="number" placeholder="0" id="cant-prov-${idx}" oninput="recalcRowManual(${idx})" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+        <td><input type="text" placeholder="und" id="unit-prov-${idx}" style="width:50px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+        <td><input type="text" placeholder="Marca alternativa" id="alt-${idx}" style="width:130px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+        <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
+        <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
+      `;
       tbody.appendChild(tr);
     }
     window._manualMode = true;
@@ -379,7 +379,7 @@ function loadItemsFromURL() {
   if (obra) {
     const info = document.createElement('div');
     info.style = 'font-size:13px;color:#555;margin-bottom:8px';
-    info.innerHTML = ``<strong>Obra:</strong> `${obra}``;
+    info.innerHTML = `<strong>Obra:</strong> ${obra}`;
     document.getElementById('tabla-proveedor-wrap').prepend(info);
   }
 
@@ -388,17 +388,17 @@ function loadItemsFromURL() {
   iParams.forEach((raw, idx) => {
     const [desc, cant, unit] = raw.split('|');
     const tr = document.createElement('tr');
-    tr.innerHTML = ``
-      <td>`${idx+1}</td>
-      <td>`${desc||''}</td>
-      <td>`${cant||''}</td>
-      <td>`${unit||''}</td>
-      <td><input type="text" placeholder="Marca / presentaciÃ³n alternativa" id="alt-`${idx}" style="width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-`${idx}" oninput="recalcRow(`${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-`${idx}" oninput="recalcRow(`${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td id="bs-`${idx}" style="font-size:12px;color:#555;white-space:nowrap">â€”</td>
-      <td id="sub-`${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">â€”</td>
-    ``;
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${desc||''}</td>
+      <td>${cant||''}</td>
+      <td>${unit||''}</td>
+      <td><input type="text" placeholder="Marca / presentación alternativa" id="alt-${idx}" style="width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+      <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
+      <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
+    `;
     tbody.appendChild(tr);
   });
   window._provItems = iParams;
@@ -410,12 +410,12 @@ function addProvItem() {
   const div = document.createElement('div');
   div.className = 'item-row';
   div.style.marginBottom = '8px';
-  div.innerHTML = ``
-    <input type="text" placeholder="DescripciÃ³n" id="pd-`${id}">
-    <input type="number" placeholder="0" id="pc-`${id}">
-    <input type="text" placeholder="und" id="pu-`${id}" style="width:70px">
-    <input type="number" step="0.01" placeholder="`$" id="pp-`${id}" style="width:80px">
-  ``;
+  div.innerHTML = `
+    <input type="text" placeholder="Descripción" id="pd-${id}">
+    <input type="number" placeholder="0" id="pc-${id}">
+    <input type="text" placeholder="und" id="pu-${id}" style="width:70px">
+    <input type="number" step="0.01" placeholder="$" id="pp-${id}" style="width:80px">
+  `;
   wrap.appendChild(div);
 }
 
@@ -453,60 +453,60 @@ function enviarProveedor() {
       const subtotal = precio * cantNum;
       const precioBS = tasa ? precio * tasa : 0;
       total += subtotal;
-      tabla += ```${idx+1}. Solicitado: `${desc} â€” `${cant} `${unit}\n``;
-      if (alt) tabla += ``   Ofrecido: `${alt}\n``;
-      tabla += ``   Precio: `$`${precio.toFixed(2)}/u``;
-      if (tasa) tabla += `` | Tasa: `${tasa} Bs./USD | Precio Bs.: `${(precioBS).toFixed(2)}``;
-      tabla += `` | Subtotal: `$`${subtotal.toFixed(2)}\n``;
+      tabla += `${idx+1}. Solicitado: ${desc} — ${cant} ${unit}\n`;
+      if (alt) tabla += `   Ofrecido: ${alt}\n`;
+      tabla += `   Precio: $${precio.toFixed(2)}/u`;
+      if (tasa) tabla += ` | Tasa: ${tasa} Bs./USD | Precio Bs.: ${(precioBS).toFixed(2)}`;
+      tabla += ` | Subtotal: $${subtotal.toFixed(2)}\n`;
     });
   }
 
-  const asunto = ``CotizaciÃ³n â€” `${nombre} â€” `${obra} â€” `${fecha}``;
-  let cuerpo = ``COTIZACIÃ“N DE MATERIALES\n``;
-  cuerpo += ``â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n``;
-  cuerpo += ``Proveedor: `${nombre}\n``;
-  if (tel) cuerpo += ``TelÃ©fono: `${tel}\n``;
-  cuerpo += ``Fecha: `${fecha}\n``;
-  cuerpo += ``Obra: `${obra}\n``;
-  cuerpo += ``â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n\n``;
+  const asunto = `Cotización — ${nombre} — ${obra} — ${fecha}`;
+  let cuerpo = `COTIZACIÓN DE MATERIALES\n`;
+  cuerpo += `─────────────────────────────\n`;
+  cuerpo += `Proveedor: ${nombre}\n`;
+  if (tel) cuerpo += `Teléfono: ${tel}\n`;
+  cuerpo += `Fecha: ${fecha}\n`;
+  cuerpo += `Obra: ${obra}\n`;
+  cuerpo += `─────────────────────────────\n\n`;
   if (tabla) {
-    cuerpo += ``PRECIOS:\n`${tabla}\n``;
-    cuerpo += ``TOTAL ESTIMADO USD: `$`${total.toFixed(2)}\n``;
+    cuerpo += `PRECIOS:\n${tabla}\n`;
+    cuerpo += `TOTAL ESTIMADO USD: $${total.toFixed(2)}\n`;
   }
-  cuerpo += ``â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n``;
-  if (validez) cuerpo += ``Validez de la oferta: `${validez}\n``;
-  if (entrega) cuerpo += ``Tiempo de entrega: `${entrega}\n``;
-  if (pagos.length) cuerpo += ``Condiciones de pago: `${pagos.join(', ')}\n``;
-  if (obsP) cuerpo += ``\nObservaciones: `${obsP}\n``;
+  cuerpo += `─────────────────────────────\n`;
+  if (validez) cuerpo += `Validez de la oferta: ${validez}\n`;
+  if (entrega) cuerpo += `Tiempo de entrega: ${entrega}\n`;
+  if (pagos.length) cuerpo += `Condiciones de pago: ${pagos.join(', ')}\n`;
+  if (obsP) cuerpo += `\nObservaciones: ${obsP}\n`;
   const banco = document.getElementById('prov-banco').value.trim();
   const titular = document.getElementById('prov-titular').value.trim();
   const cuenta = document.getElementById('prov-cuenta').value.trim();
   const tipoCuenta = document.getElementById('prov-tipo-cuenta').value;
   const rif = document.getElementById('prov-rif').value.trim();
   if (banco || cuenta) {
-    cuerpo += ``\nâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\nDATOS BANCARIOS:\n``;
-    if (banco) cuerpo += ``Banco: `${banco}\n``;
-    if (titular) cuerpo += ``Titular: `${titular}\n``;
-    if (cuenta) cuerpo += ``NÂ° de cuenta: `${cuenta}\n``;
-    if (tipoCuenta) cuerpo += ``Tipo: `${tipoCuenta}\n``;
-    if (rif) cuerpo += ``RIF / CÃ©dula: `${rif}\n``;
+    cuerpo += `\n─────────────────────────────\nDATOS BANCARIOS:\n`;
+    if (banco) cuerpo += `Banco: ${banco}\n`;
+    if (titular) cuerpo += `Titular: ${titular}\n`;
+    if (cuenta) cuerpo += `N° de cuenta: ${cuenta}\n`;
+    if (tipoCuenta) cuerpo += `Tipo: ${tipoCuenta}\n`;
+    if (rif) cuerpo += `RIF / Cédula: ${rif}\n`;
   }
 
   document.getElementById('btn-email-prov').onclick = () => {
-    window.location.href = ``mailto:`${CORREO_JUNTA}?subject=`${encodeURIComponent(asunto)}&body=`${encodeURIComponent(cuerpo)}``;
+    window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
   };
   document.getElementById('btn-wa-prov').onclick = () => {
-    window.open(``https://wa.me/`${WHATSAPP_JUNTA}?text=`${encodeURIComponent(asunto + '\n\n' + cuerpo)}``, '_blank');
+    window.open(`https://wa.me/${WHATSAPP_JUNTA}?text=${encodeURIComponent(asunto + '\n\n' + cuerpo)}`, '_blank');
   };
-  document.getElementById('total-usd').textContent = '`$' + total.toFixed(2);
+  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
   const conFactura = document.getElementById('pago-fac').checked || document.getElementById('pago-amb').checked;
   if (conFactura) {
     const iva = total * 0.16;
-    document.getElementById('iva-usd').textContent = '`$' + iva.toFixed(2);
-    document.getElementById('total-final-usd').textContent = '`$' + (total + iva).toFixed(2);
+    document.getElementById('iva-usd').textContent = '$' + iva.toFixed(2);
+    document.getElementById('total-final-usd').textContent = '$' + (total + iva).toFixed(2);
     document.getElementById('iva-row').style.display = 'block';
     document.getElementById('total-final-row').style.display = 'block';
-    cuerpo = cuerpo.replace(``TOTAL ESTIMADO USD: `$`${total.toFixed(2)}``, ``SUBTOTAL USD: `$`${total.toFixed(2)}\nIVA 16%: `$`${iva.toFixed(2)}\nTOTAL CON IVA USD: `$`${(total+iva).toFixed(2)}``);
+    cuerpo = cuerpo.replace(`TOTAL ESTIMADO USD: $${total.toFixed(2)}`, `SUBTOTAL USD: $${total.toFixed(2)}\nIVA 16%: $${iva.toFixed(2)}\nTOTAL CON IVA USD: $${(total+iva).toFixed(2)}`);
   }
   document.getElementById('resumen-total').style.display = 'block';
   document.getElementById('envio-prov-opts').style.display = 'flex';
@@ -518,15 +518,15 @@ function recalcRowManual(idx) {
   const cant = parseFloat(document.getElementById('cant-prov-'+idx)?.value || 1);
   const precioBS = tasa ? precio * tasa : 0;
   const subtotal = precio * cant;
-  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : 'â€”';
-  document.getElementById('sub-'+idx).textContent = precio ? '`$' + subtotal.toFixed(2) : 'â€”';
+  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+  document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
   let total = 0;
   for (let i = 0; i < 5; i++) {
     const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);
     const c = parseFloat(document.getElementById('cant-prov-'+i)?.value || 1);
     total += p * c;
   }
-  document.getElementById('total-usd').textContent = '`$' + total.toFixed(2);
+  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
 }
 
 function recalcRow(idx) {
@@ -537,8 +537,8 @@ function recalcRow(idx) {
   const cant = iParams[idx] ? parseFloat(iParams[idx].split('|')[1] || 1) : 1;
   const precioBS = tasa ? precio * tasa : 0;
   const subtotal = precio * cant;
-  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : 'â€”';
-  document.getElementById('sub-'+idx).textContent = precio ? '`$' + subtotal.toFixed(2) : 'â€”';
+  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+  document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
   // recalc grand total
   let total = 0;
   iParams.forEach((_, i) => {
@@ -546,7 +546,7 @@ function recalcRow(idx) {
     const c = parseFloat(iParams[i].split('|')[1] || 1);
     total += p * c;
   });
-  document.getElementById('total-usd').textContent = '`$' + total.toFixed(2);
+  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
 }
 
 // Auto-detectar modo por URL
