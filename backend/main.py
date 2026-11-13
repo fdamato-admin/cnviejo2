@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.api import proveedores, trabajos, auth, suministros, respaldos
@@ -55,3 +55,6 @@ app.include_router(caja.router, prefix="/api")
 @app.on_event("startup")
 def _iniciar_respaldos():
     respaldos.iniciar_programador()
+
+from app.api import solicitud_form
+app.include_router(solicitud_form.router)
