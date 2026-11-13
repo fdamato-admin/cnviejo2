@@ -39,23 +39,6 @@
   #tabla-proveedor-wrap { display: none; overflow-x: auto; }
   .info-box { background: #e8f0fe; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #1a3a5c; margin-bottom: 16px; }
 
-  /* Modal proveedores */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
-  .modal-overlay.open { display: flex; }
-  .modal-box { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
-  .modal-box h2 { font-size: 16px; font-weight: 700; color: #1a3a5c; margin-bottom: 6px; }
-  .modal-box p { font-size: 13px; color: #666; margin-bottom: 16px; }
-  .prov-check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #e8e8e8; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.15s; }
-  .prov-check-item:hover { background: #f0f4f8; }
-  .prov-check-item input[type=checkbox] { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
-  .prov-check-item .prov-info { flex: 1; }
-  .prov-info strong { font-size: 14px; color: #1a3a5c; display: block; }
-  .prov-info span { font-size: 12px; color: #888; }
-  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-  .btn-modal-cancel { flex: 1; padding: 12px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; color: #555; }
-  .btn-modal-send { flex: 2; padding: 12px; background: #25d366; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
-  .btn-modal-send:disabled { background: #ccc; cursor: not-allowed; }
-  .loading-prov { text-align: center; padding: 20px; color: #888; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -87,19 +70,11 @@
     <div id="items-list"></div>
     <button class="btn-add" onclick="addItem()">+ Agregar ítem</button>
 
-    <button class="btn-send" onclick="abrirModalProveedores()">📱 Enviar solicitud a proveedores</button>
-  </div>
-
-  <!-- MODAL SELECCIÓN PROVEEDORES -->
-  <div id="modal-proveedores" class="modal-overlay">
-    <div class="modal-box">
-      <h2>Seleccionar proveedores</h2>
-      <p>Seleccione los proveedores a quienes desea enviar esta solicitud de cotización. Se abrirá WhatsApp para cada uno.</p>
-      <div id="lista-proveedores"><div class="loading-prov">Cargando proveedores...</div></div>
-      <div class="modal-actions">
-        <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
-        <button class="btn-modal-send" id="btn-enviar-prov" onclick="enviarAProveedores()" disabled>📱 Enviar por WhatsApp</button>
-      </div>
+    <button class="btn-send" onclick="generarEnlace()">🔗 Generar enlace para proveedores</button>
+    <div id="enlace-box" style="display:none;margin-top:14px;background:#e8f0fe;border-radius:10px;padding:14px 16px">
+      <div style="font-size:12px;font-weight:600;color:#1a3a5c;margin-bottom:8px">Enlace listo — pégalo en WhatsApp a cada proveedor:</div>
+      <div id="enlace-texto" style="font-size:12px;color:#333;word-break:break-all;background:#fff;border-radius:6px;padding:8px 10px;border:1px solid #c8d8f0;margin-bottom:10px"></div>
+      <button onclick="copiarEnlace()" id="btn-copiar" style="width:100%;padding:12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">📋 Copiar enlace</button>
     </div>
   </div>
 
@@ -232,7 +207,7 @@ function getItems() {
   return items;
 }
 
-let _solicitudData = null; // guardamos los datos para usar en el modal
+let _enlaceGenerado = '';
 
 function buildSolicitudData() {
   const obra = document.getElementById('obra').value.trim();
@@ -266,83 +241,35 @@ function buildSolicitudData() {
   return { obra, fecha, cuerpo, urlProv };
 }
 
-async function abrirModalProveedores() {
+function generarEnlace() {
   const data = buildSolicitudData();
   if (!data) return;
-  _solicitudData = data;
-
-  document.getElementById('modal-proveedores').classList.add('open');
-  document.getElementById('btn-enviar-prov').disabled = true;
-  document.getElementById('lista-proveedores').innerHTML = '<div class="loading-prov">⏳ Cargando proveedores...</div>';
-
-  try {
-    const res = await fetch('https://cnviejo2-production-46d5.up.railway.app/api/proveedores/?estado=activo');
-    if (!res.ok) throw new Error('Error ' + res.status);
-    const provs = await res.json();
-
-    if (!provs.length) {
-      document.getElementById('lista-proveedores').innerHTML = '<div class="loading-prov">No hay proveedores activos registrados.</div>';
-      return;
-    }
-
-    let html = '';
-    provs.forEach((p, idx) => {
-      const nombre = p.nombre || '';
-      const empresa = p.empresa || '';
-      const tel = p.telefono || p.telefono_alt || '';
-      html += `
-        <label class="prov-check-item" for="pchk-${idx}">
-          <input type="checkbox" id="pchk-${idx}" data-tel="${tel}" data-nombre="${nombre}" onchange="actualizarBtnEnviar()">
-          <div class="prov-info">
-            <strong>${empresa || nombre}</strong>
-            <span>${empresa ? nombre + ' · ' : ''}${tel || 'Sin teléfono'}</span>
-          </div>
-        </label>`;
-    });
-    document.getElementById('lista-proveedores').innerHTML = html;
-  } catch(e) {
-    document.getElementById('lista-proveedores').innerHTML =
-      `<div class="loading-prov" style="color:#e53935">Error al cargar proveedores.<br><small>${e.message}</small></div>`;
-  }
+  _enlaceGenerado = data.urlProv;
+  document.getElementById('enlace-texto').textContent = data.urlProv;
+  document.getElementById('enlace-box').style.display = 'block';
+  document.getElementById('btn-copiar').textContent = '📋 Copiar enlace';
 }
 
-function actualizarBtnEnviar() {
-  const checks = document.querySelectorAll('#lista-proveedores input[type=checkbox]:checked');
-  document.getElementById('btn-enviar-prov').disabled = checks.length === 0;
-  document.getElementById('btn-enviar-prov').textContent = checks.length
-    ? `📱 Enviar por WhatsApp (${checks.length})`
-    : '📱 Enviar por WhatsApp';
-}
-
-function cerrarModal() {
-  document.getElementById('modal-proveedores').classList.remove('open');
-}
-
-function enviarAProveedores() {
-  const checks = document.querySelectorAll('#lista-proveedores input[type=checkbox]:checked');
-  if (!checks.length) return;
-  if (!_solicitudData) return;
-
-  const { cuerpo } = _solicitudData;
-
-  checks.forEach((chk, i) => {
-    const tel = chk.dataset.tel.replace(/[^\d]/g, '');
-    if (!tel) return;
-    // Pequeño delay entre ventanas para que el navegador no las bloquee
+function copiarEnlace() {
+  if (!_enlaceGenerado) return;
+  navigator.clipboard.writeText(_enlaceGenerado).then(() => {
+    document.getElementById('btn-copiar').textContent = '✅ Enlace copiado';
     setTimeout(() => {
-      window.open(`https://wa.me/${tel}?text=${encodeURIComponent(cuerpo)}`, '_blank');
-    }, i * 600);
+      document.getElementById('btn-copiar').textContent = '📋 Copiar enlace';
+    }, 2500);
+  }).catch(() => {
+    // Fallback para navegadores sin clipboard API
+    const el = document.createElement('textarea');
+    el.value = _enlaceGenerado;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    document.getElementById('btn-copiar').textContent = '✅ Enlace copiado';
+    setTimeout(() => {
+      document.getElementById('btn-copiar').textContent = '📋 Copiar enlace';
+    }, 2500);
   });
-
-  cerrarModal();
-}
-
-// Mantener envío por email a la junta también (como opción secundaria)
-function enviarContratista() {
-  const data = buildSolicitudData();
-  if (!data) return;
-  const asunto = `Solicitud de materiales — ${data.obra} — ${data.fecha}`;
-  window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(data.cuerpo)}`;
 }
 
 function loadItemsFromURL() {
