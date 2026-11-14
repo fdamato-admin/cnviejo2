@@ -419,24 +419,58 @@ function enviarProveedor() {
     if (rif) cuerpo += `RIF / Cédula: ${rif}\n`;
   }
 
-  document.getElementById('btn-email-prov').onclick = () => {
-    window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-  };
-  document.getElementById('btn-wa-prov').onclick = () => {
-    window.open(`https://wa.me/${WHATSAPP_JUNTA}?text=${encodeURIComponent(asunto + '\n\n' + cuerpo)}`, '_blank');
-  };
-  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
   const conFactura = document.getElementById('pago-fac').checked || document.getElementById('pago-amb').checked;
+  let iva = 0;
   if (conFactura) {
-    const iva = total * 0.16;
+    iva = total * 0.16;
     document.getElementById('iva-usd').textContent = '$' + iva.toFixed(2);
     document.getElementById('total-final-usd').textContent = '$' + (total + iva).toFixed(2);
     document.getElementById('iva-row').style.display = 'block';
     document.getElementById('total-final-row').style.display = 'block';
     cuerpo = cuerpo.replace(`TOTAL ESTIMADO USD: $${total.toFixed(2)}`, `SUBTOTAL USD: $${total.toFixed(2)}\nIVA 16%: $${iva.toFixed(2)}\nTOTAL CON IVA USD: $${(total+iva).toFixed(2)}`);
   }
+  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
   document.getElementById('resumen-total').style.display = 'block';
   document.getElementById('envio-prov-opts').style.display = 'flex';
+
+  // Guardar cotización en la BD
+  const banco = document.getElementById('prov-banco').value.trim();
+  const titular = document.getElementById('prov-titular').value.trim();
+  const cuenta = document.getElementById('prov-cuenta').value.trim();
+  const tipoCuenta = document.getElementById('prov-tipo-cuenta').value;
+  const rif = document.getElementById('prov-rif').value.trim();
+  const itemsGuardar = iParams.map((raw, idx) => {
+    const [desc, cant, unit] = raw.split('|');
+    return {
+      descripcion: desc || '',
+      cantidad: cant || '',
+      unidad: unit || '',
+      alternativa: document.getElementById('alt-'+idx)?.value.trim() || '',
+      precio_usd: parseFloat(document.getElementById('precio-'+idx)?.value || 0),
+      tasa_bs: parseFloat(document.getElementById('tasa-'+idx)?.value || 0),
+      subtotal_usd: parseFloat(document.getElementById('precio-'+idx)?.value || 0) * parseFloat(cant || 1)
+    };
+  });
+
+  fetch('https://cnviejo2-production-46d5.up.railway.app/api/solicitudes-insumos/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      obra, proveedor_nombre: nombre, proveedor_telefono: tel,
+      validez, tiempo_entrega: entrega,
+      condicion_pago: pagos.join(', ') || '',
+      subtotal_usd: total, iva_usd: iva, total_usd: total + iva,
+      banco, titular, cuenta, tipo_cuenta: tipoCuenta, rif,
+      observaciones_prov: obsP, items: itemsGuardar
+    })
+  }).catch(() => {}); // silencioso — no bloquea el envío
+
+  document.getElementById('btn-email-prov').onclick = () => {
+    window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  };
+  document.getElementById('btn-wa-prov').onclick = () => {
+    window.open(`https://wa.me/${WHATSAPP_JUNTA}?text=${encodeURIComponent(asunto + '\n\n' + cuerpo)}`, '_blank');
+  };
 }
 
 function recalcRowManual(idx) {

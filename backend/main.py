@@ -58,3 +58,52 @@ def _iniciar_respaldos():
 
 from app.api import solicitud_form
 app.include_router(solicitud_form.router)
+from app.api import solicitudes_insumos
+app.include_router(solicitudes_insumos.router, prefix="/api")
+
+def _migrar_solicitudes_insumos():
+    from sqlalchemy import text
+    with engine.begin() as con:
+        # Crear tabla solicitudes_insumos si no existe
+        con.execute(text("""
+            CREATE TABLE IF NOT EXISTS solicitudes_insumos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                obra VARCHAR(300) NOT NULL,
+                fecha_requerida VARCHAR(20),
+                observaciones TEXT,
+                proveedor_id INTEGER REFERENCES proveedores(id),
+                proveedor_nombre VARCHAR(150),
+                proveedor_telefono VARCHAR(30),
+                validez VARCHAR(100),
+                tiempo_entrega VARCHAR(100),
+                condicion_pago VARCHAR(50),
+                subtotal_usd NUMERIC(12,2),
+                iva_usd NUMERIC(12,2),
+                total_usd NUMERIC(12,2),
+                banco VARCHAR(100),
+                titular VARCHAR(150),
+                cuenta VARCHAR(50),
+                tipo_cuenta VARCHAR(20),
+                rif VARCHAR(30),
+                observaciones_prov TEXT,
+                estado VARCHAR(20) DEFAULT 'pendiente',
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en DATETIME
+            )
+        """))
+        con.execute(text("""
+            CREATE TABLE IF NOT EXISTS solicitud_insumo_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                solicitud_id INTEGER NOT NULL REFERENCES solicitudes_insumos(id),
+                descripcion VARCHAR(300) NOT NULL,
+                cantidad VARCHAR(20),
+                unidad VARCHAR(30),
+                alternativa VARCHAR(200),
+                precio_usd NUMERIC(12,2),
+                tasa_bs NUMERIC(12,2),
+                subtotal_usd NUMERIC(12,2),
+                aprobado BOOLEAN DEFAULT 1
+            )
+        """))
+
+_migrar_solicitudes_insumos()

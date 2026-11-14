@@ -184,3 +184,61 @@ class CompraSuministro(Base):
     cantidad = _Col(_Flt, nullable=True)
     monto_usd = _Col(_Flt, nullable=True)
     nombre = _Col(_Str(200), nullable=True)
+
+# AGREGAR AL FINAL DE models.py
+
+import enum as _enum
+
+class EstadoSolicitudInsumos(str, _enum.Enum):
+    pendiente = "pendiente"
+    cotizada = "cotizada"
+    aprobada = "aprobada"
+    convertida = "convertida"
+    cancelada = "cancelada"
+
+class SolicitudInsumos(Base):
+    __tablename__ = "solicitudes_insumos"
+    id = Column(Integer, primary_key=True, index=True)
+    obra = Column(String(300), nullable=False)
+    fecha_requerida = Column(String(20), nullable=True)
+    observaciones = Column(Text, nullable=True)
+    # Proveedor que cotizó
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    proveedor_nombre = Column(String(150), nullable=True)
+    proveedor_telefono = Column(String(30), nullable=True)
+    # Condiciones
+    validez = Column(String(100), nullable=True)
+    tiempo_entrega = Column(String(100), nullable=True)
+    condicion_pago = Column(String(50), nullable=True)
+    # Totales
+    subtotal_usd = Column(Numeric(12,2), nullable=True)
+    iva_usd = Column(Numeric(12,2), nullable=True)
+    total_usd = Column(Numeric(12,2), nullable=True)
+    # Datos bancarios
+    banco = Column(String(100), nullable=True)
+    titular = Column(String(150), nullable=True)
+    cuenta = Column(String(50), nullable=True)
+    tipo_cuenta = Column(String(20), nullable=True)
+    rif = Column(String(30), nullable=True)
+    observaciones_prov = Column(Text, nullable=True)
+    # Estado
+    estado = Column(Enum(EstadoSolicitudInsumos), default=EstadoSolicitudInsumos.pendiente)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
+    # Relaciones
+    items = relationship("SolicitudInsumoItem", back_populates="solicitud", cascade="all, delete-orphan")
+    proveedor = relationship("Proveedor", foreign_keys=[proveedor_id])
+
+class SolicitudInsumoItem(Base):
+    __tablename__ = "solicitud_insumo_items"
+    id = Column(Integer, primary_key=True, index=True)
+    solicitud_id = Column(Integer, ForeignKey("solicitudes_insumos.id"), nullable=False)
+    descripcion = Column(String(300), nullable=False)
+    cantidad = Column(String(20), nullable=True)
+    unidad = Column(String(30), nullable=True)
+    alternativa = Column(String(200), nullable=True)
+    precio_usd = Column(Numeric(12,2), nullable=True)
+    tasa_bs = Column(Numeric(12,2), nullable=True)
+    subtotal_usd = Column(Numeric(12,2), nullable=True)
+    aprobado = Column(Boolean, default=True)  # para seleccionar qué comprar
+    solicitud = relationship("SolicitudInsumos", back_populates="items")
