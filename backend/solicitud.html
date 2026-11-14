@@ -124,23 +124,35 @@
 
     <div id="tabla-proveedor-wrap">
       <table class="readonly-table" id="tabla-precios">
-        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Tasa Bs./USD</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
+        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
         <tbody id="tbody-precios"></tbody>
       </table>
     </div>
 
     <div id="items-prov-manual" style="display:none"></div>
 
-    <div id="resumen-total" style="display:none;background:#1a3a5c;color:#fff;border-radius:10px;padding:14px 18px;margin-top:16px;text-align:right">
+    <div style="margin-top:16px;display:flex;align-items:center;gap:10px;background:#f0f4f8;border-radius:8px;padding:12px 14px">
+      <label style="font-size:13px;font-weight:600;color:#1a3a5c;white-space:nowrap;margin:0">Tasa Bs./USD:</label>
+      <input type="number" step="0.01" min="0" id="tasa-global" placeholder="Ej: 46.50" oninput="recalcAllRows()" style="width:120px;padding:8px 10px;border:1px solid #c0d0e0;border-radius:6px;font-size:14px;font-weight:600">
+      <span style="font-size:12px;color:#666">Se aplica a todos los ítems</span>
+    </div>
+
+    <div id="resumen-total" style="display:none;background:#1a3a5c;color:#fff;border-radius:10px;padding:14px 18px;margin-top:12px;text-align:right">
       <span style="font-size:13px;opacity:0.8">SUBTOTAL USD</span><br>
       <span id="total-usd" style="font-size:22px;font-weight:700">$0.00</span>
+      <div id="bs-total-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
+        <span style="font-size:13px;opacity:0.8">SUBTOTAL Bs.</span><br>
+        <span id="total-bs" style="font-size:16px;font-weight:600">Bs. 0,00</span>
+      </div>
       <div id="iva-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
         <span style="font-size:13px;opacity:0.8">IVA 16%</span><br>
         <span id="iva-usd" style="font-size:16px;font-weight:600">$0.00</span>
+        <span id="iva-bs" style="font-size:13px;opacity:0.8;display:block"></span>
       </div>
       <div id="total-final-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
         <span style="font-size:13px;opacity:0.8">TOTAL CON IVA USD</span><br>
         <span id="total-final-usd" style="font-size:24px;font-weight:700">$0.00</span>
+        <span id="total-final-bs" style="font-size:14px;opacity:0.8;display:block"></span>
       </div>
     </div>
     <button class="btn-send" onclick="enviarProveedor()">Preparar cotización</button>
@@ -292,7 +304,6 @@ function loadItemsFromURL() {
         <td><input type="text" placeholder="und" id="unit-prov-${idx}" style="width:50px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
         <td><input type="text" placeholder="Marca alternativa" id="alt-${idx}" style="width:130px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
         <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
         <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
         <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
       `;
@@ -322,7 +333,6 @@ function loadItemsFromURL() {
       <td>${unit||''}</td>
       <td><input type="text" placeholder="Marca / presentación alternativa" id="alt-${idx}" style="width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
       <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
       <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
       <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
     `;
@@ -369,69 +379,100 @@ function enviarProveedor() {
   let tabla = '';
   let total = 0;
 
-  const tasa_global = document.getElementById('tasa-global')?.value;
+  const tasa = getTasaGlobal();
+
   if (iParams.length) {
     iParams.forEach((raw, idx) => {
       const [desc, cant, unit] = raw.split('|');
       const alt = document.getElementById('alt-'+idx)?.value.trim() || '';
       const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-      const tasa = parseFloat(document.getElementById('tasa-'+idx)?.value || 0);
       const cantNum = parseFloat(cant || 1);
       const subtotal = precio * cantNum;
       const precioBS = tasa ? precio * tasa : 0;
       total += subtotal;
-      tabla += `${idx+1}. Solicitado: ${desc} — ${cant} ${unit}\n`;
+      tabla += `${idx+1}. ${desc} — ${cant} ${unit}\n`;
       if (alt) tabla += `   Ofrecido: ${alt}\n`;
-      tabla += `   Precio: $${precio.toFixed(2)}/u`;
-      if (tasa) tabla += ` | Tasa: ${tasa} Bs./USD | Precio Bs.: ${(precioBS).toFixed(2)}`;
-      tabla += ` | Subtotal: $${subtotal.toFixed(2)}\n`;
+      tabla += `   $${precio.toFixed(2)}/u`;
+      if (tasa && precio) tabla += ` | Bs. ${precioBS.toFixed(2)}/u`;
+      tabla += ` | Sub: $${subtotal.toFixed(2)}`;
+      if (tasa && subtotal) tabla += ` / Bs. ${(subtotal * tasa).toFixed(2)}`;
+      tabla += `\n`;
     });
   }
 
-  const asunto = `Cotización — ${nombre} — ${obra} — ${fecha}`;
-  let cuerpo = `COTIZACIÓN DE MATERIALES\n`;
-  cuerpo += `─────────────────────────────\n`;
-  cuerpo += `Proveedor: ${nombre}\n`;
-  if (tel) cuerpo += `Teléfono: ${tel}\n`;
-  cuerpo += `Fecha: ${fecha}\n`;
-  cuerpo += `Obra: ${obra}\n`;
-  cuerpo += `─────────────────────────────\n\n`;
-  if (tabla) {
-    cuerpo += `PRECIOS:\n${tabla}\n`;
-    cuerpo += `TOTAL ESTIMADO USD: $${total.toFixed(2)}\n`;
-  }
-  cuerpo += `─────────────────────────────\n`;
-  if (validez) cuerpo += `Validez de la oferta: ${validez}\n`;
-  if (entrega) cuerpo += `Tiempo de entrega: ${entrega}\n`;
-  if (pagos.length) cuerpo += `Condiciones de pago: ${pagos.join(', ')}\n`;
-  if (obsP) cuerpo += `\nObservaciones: ${obsP}\n`;
   const banco = document.getElementById('prov-banco').value.trim();
   const titular = document.getElementById('prov-titular').value.trim();
   const cuenta = document.getElementById('prov-cuenta').value.trim();
   const tipoCuenta = document.getElementById('prov-tipo-cuenta').value;
   const rif = document.getElementById('prov-rif').value.trim();
-  if (banco || cuenta) {
-    cuerpo += `\n─────────────────────────────\nDATOS BANCARIOS:\n`;
-    if (banco) cuerpo += `Banco: ${banco}\n`;
-    if (titular) cuerpo += `Titular: ${titular}\n`;
-    if (cuenta) cuerpo += `N° de cuenta: ${cuenta}\n`;
-    if (tipoCuenta) cuerpo += `Tipo: ${tipoCuenta}\n`;
-    if (rif) cuerpo += `RIF / Cédula: ${rif}\n`;
-  }
 
   const conFactura = document.getElementById('pago-fac').checked || document.getElementById('pago-amb').checked;
   let iva = 0;
+  if (conFactura) iva = total * 0.16;
+  const totalFinal = total + iva;
+  const totalBS = tasa ? total * tasa : 0;
+  const ivaBS = tasa ? iva * tasa : 0;
+  const totalFinalBS = tasa ? totalFinal * tasa : 0;
+
+  // ---- Actualizar resumen visual ----
+  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
+  if (tasa) {
+    document.getElementById('total-bs').textContent = 'Bs. ' + totalBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('bs-total-row').style.display = 'block';
+  }
   if (conFactura) {
-    iva = total * 0.16;
     document.getElementById('iva-usd').textContent = '$' + iva.toFixed(2);
-    document.getElementById('total-final-usd').textContent = '$' + (total + iva).toFixed(2);
+    if (tasa) document.getElementById('iva-bs').textContent = 'Bs. ' + ivaBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('total-final-usd').textContent = '$' + totalFinal.toFixed(2);
+    if (tasa) document.getElementById('total-final-bs').textContent = 'Bs. ' + totalFinalBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
     document.getElementById('iva-row').style.display = 'block';
     document.getElementById('total-final-row').style.display = 'block';
-    cuerpo = cuerpo.replace(`TOTAL ESTIMADO USD: $${total.toFixed(2)}`, `SUBTOTAL USD: $${total.toFixed(2)}\nIVA 16%: $${iva.toFixed(2)}\nTOTAL CON IVA USD: $${(total+iva).toFixed(2)}`);
   }
-  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
   document.getElementById('resumen-total').style.display = 'block';
   document.getElementById('envio-prov-opts').style.display = 'flex';
+
+  // ---- Construir mensaje ----
+  const sep = '--------------------------------';
+  const asunto = `Cotizacion ${nombre} | ${obra} | ${fecha}`;
+  let cuerpo = `*COTIZACION DE INSUMOS*\n`;
+  cuerpo += `${sep}\n`;
+  cuerpo += `Proveedor: *${nombre}*\n`;
+  if (tel) cuerpo += `Tel: ${tel}\n`;
+  cuerpo += `Fecha: ${fecha}\n`;
+  cuerpo += `Obra: *${obra}*\n`;
+  if (tasa) cuerpo += `Tasa: ${tasa} Bs./USD\n`;
+  cuerpo += `${sep}\n\n`;
+  if (tabla) {
+    cuerpo += `*ITEMS:*\n${tabla}\n`;
+  }
+  cuerpo += `${sep}\n`;
+  if (conFactura) {
+    cuerpo += `Subtotal:  $${total.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${totalBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `\nIVA 16%:   $${iva.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${ivaBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `\n*TOTAL:    $${totalFinal.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${totalFinalBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `*\n`;
+  } else {
+    cuerpo += `*TOTAL:    $${total.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${totalBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `*\n`;
+  }
+  cuerpo += `${sep}\n`;
+  if (validez) cuerpo += `Validez: ${validez}\n`;
+  if (entrega) cuerpo += `Entrega: ${entrega}\n`;
+  if (pagos.length) cuerpo += `Pago: ${pagos.join(' / ')}\n`;
+  if (obsP) cuerpo += `\nObs: ${obsP}\n`;
+  if (banco || cuenta) {
+    cuerpo += `\n*DATOS BANCARIOS:*\n`;
+    if (banco) cuerpo += `Banco: ${banco}\n`;
+    if (titular) cuerpo += `Titular: ${titular}\n`;
+    if (cuenta) cuerpo += `Cuenta: ${cuenta}`;
+    if (tipoCuenta) cuerpo += ` (${tipoCuenta})`;
+    if (cuenta || tipoCuenta) cuerpo += `\n`;
+    if (rif) cuerpo += `RIF/CI: ${rif}\n`;
+  }
 
   // Guardar cotización en la BD
   const itemsGuardar = iParams.map((raw, idx) => {
@@ -468,13 +509,46 @@ function enviarProveedor() {
   };
 }
 
+function getTasaGlobal() {
+  return parseFloat(document.getElementById('tasa-global')?.value || 0);
+}
+
+function recalcAllRows() {
+  const tasa = getTasaGlobal();
+  const params = new URLSearchParams(window.location.search);
+  const iParams = params.getAll('i');
+  if (iParams.length) {
+    iParams.forEach((raw, idx) => {
+      const cant = parseFloat(raw.split('|')[1] || 1);
+      const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
+      const precioBS = tasa ? precio * tasa : 0;
+      document.getElementById('bs-'+idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    });
+  } else {
+    for (let i = 0; i < 5; i++) {
+      const precio = parseFloat(document.getElementById('precio-'+i)?.value || 0);
+      const precioBS = tasa ? precio * tasa : 0;
+      if (document.getElementById('bs-'+i))
+        document.getElementById('bs-'+i).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    }
+  }
+  // actualizar total Bs. en resumen si ya está visible
+  const totalUSD = parseFloat(document.getElementById('total-usd').textContent.replace('$','') || 0);
+  if (tasa && totalUSD) {
+    document.getElementById('total-bs').textContent = 'Bs. ' + (totalUSD * tasa).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('bs-total-row').style.display = 'block';
+  } else {
+    document.getElementById('bs-total-row').style.display = 'none';
+  }
+}
+
 function recalcRowManual(idx) {
   const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-  const tasa = parseFloat(document.getElementById('tasa-'+idx)?.value || 0);
+  const tasa = getTasaGlobal();
   const cant = parseFloat(document.getElementById('cant-prov-'+idx)?.value || 1);
   const precioBS = tasa ? precio * tasa : 0;
   const subtotal = precio * cant;
-  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+  document.getElementById('bs-'+idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
   document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
   let total = 0;
   for (let i = 0; i < 5; i++) {
@@ -483,19 +557,19 @@ function recalcRowManual(idx) {
     total += p * c;
   }
   document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
+  recalcAllRows();
 }
 
 function recalcRow(idx) {
   const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-  const tasa = parseFloat(document.getElementById('tasa-'+idx)?.value || 0);
+  const tasa = getTasaGlobal();
   const params = new URLSearchParams(window.location.search);
   const iParams = params.getAll('i');
   const cant = iParams[idx] ? parseFloat(iParams[idx].split('|')[1] || 1) : 1;
   const precioBS = tasa ? precio * tasa : 0;
   const subtotal = precio * cant;
-  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+  document.getElementById('bs-'+idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
   document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
-  // recalc grand total
   let total = 0;
   iParams.forEach((_, i) => {
     const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);
@@ -503,6 +577,7 @@ function recalcRow(idx) {
     total += p * c;
   });
   document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
+  recalcAllRows();
 }
 
 // Auto-detectar modo por URL
