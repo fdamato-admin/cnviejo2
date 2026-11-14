@@ -1,26 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import SuministroForm from './SuministroForm';
 import PedidosSuministros from './PedidosSuministros';
 import ImpactoRecibo from './ImpactoRecibo';
+import CotizacionesInsumos from './CotizacionesInsumos';
 
 const CATEGORIAS = [
-  'Químicos de piscina', 'Equipos de piscina', 'Jardinería y áreas verdes',
-  'Electricidad', 'Plomería / Fontanería', 'Planta eléctrica',
-  'Seguridad / Vigilancia', 'Pintura e impermeabilización',
-  'Ferretería y materiales', 'Limpieza', 'Aire acondicionado',
-  'Informática y tecnología', 'Otro',
+  'QuÃ­micos de piscina', 'Equipos de piscina', 'JardinerÃ­a y Ã¡reas verdes',
+  'Electricidad', 'PlomerÃ­a / FontanerÃ­a', 'Planta elÃ©ctrica',
+  'Seguridad / Vigilancia', 'Pintura e impermeabilizaciÃ³n',
+  'FerreterÃ­a y materiales', 'Limpieza', 'Aire acondicionado',
+  'InformÃ¡tica y tecnologÃ­a', 'Otro',
 ];
 
 function formatFecha(fecha) {
-  if (!fecha) return '—';
+  if (!fecha) return 'â€”';
   const [y, m, d] = fecha.split('-');
   return `${d}/${m}/${y}`;
 }
 
 function formatPrecio(precio, moneda) {
-  if (!precio && precio !== 0) return '—';
-  const simbolo = moneda === 'Euros' ? '€' : moneda === 'USDT' ? 'USDT ' : '$';
+  if (!precio && precio !== 0) return 'â€”';
+  const simbolo = moneda === 'Euros' ? 'â‚¬' : moneda === 'USDT' ? 'USDT ' : '$';
   return `${simbolo}${parseFloat(precio).toFixed(2)}`;
 }
 
@@ -31,16 +32,16 @@ function formatTotal(s) {
   if (s.monto_total_divisa || s.monto_total_divisa === 0) {
     if (s.monto_total_divisa !== null) return formatPrecio(s.monto_total_divisa, s.moneda_pago);
   }
-  return '—';
+  return 'â€”';
 }
 
 function formatBs(valor) {
-  if (!valor && valor !== 0) return '—';
+  if (!valor && valor !== 0) return 'â€”';
   return `Bs ${Number(valor).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDocumento(s) {
-  if (!s.tipo_documento) return '—';
+  if (!s.tipo_documento) return 'â€”';
   if (s.tipo_documento === 'Otro') return s.documento_otro || 'Otro';
   return s.tipo_documento;
 }
@@ -65,10 +66,12 @@ export default function Suministros() {
         {pestana('compras', 'Compras')}
         {pestana('pedidos', 'Pedido de Suministros')}
         {pestana('impacto', 'Impacto Gastos en el Recibo')}
+        {pestana('cotizaciones', 'Cotizaciones Recibidas')}
       </div>
       {vista === 'compras' && <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />}
       {vista === 'pedidos' && <PedidosSuministros onComprar={comprarPedido} />}
       {vista === 'impacto' && <ImpactoRecibo />}
+      {vista === 'cotizaciones' && <CotizacionesInsumos />}
     </div>
   );
 }
@@ -178,7 +181,7 @@ function Compras({ pedido, onPedidoUsado }) {
         />
         <select value={categoria} onChange={e => setCategoria(e.target.value)}
           style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, minWidth: 180 }}>
-          <option value="">Todas las categorías</option>
+          <option value="">Todas las categorÃ­as</option>
           {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -198,7 +201,7 @@ function Compras({ pedido, onPedidoUsado }) {
               <tr style={{ background: '#f5f7fa' }}>
                 {[
                   { t: 'Nombre', k: 'nombre' },
-                  { t: 'Categoría', k: 'categoria' },
+                  { t: 'CategorÃ­a', k: 'categoria' },
                   { t: 'Unidad' },
                   { t: 'Cantidad' },
                   { t: 'Proveedor' },
@@ -207,14 +210,14 @@ function Compras({ pedido, onPedidoUsado }) {
                   { t: 'Precio unit.' },
                   { t: 'Total' },
                   { t: 'Documento' },
-                  { t: 'Recepción' },
+                  { t: 'RecepciÃ³n' },
                   { t: '' },
                 ].map(h => (
                   <th key={h.t || 'acciones'}
                     onClick={h.k ? () => cambiarOrden(h.k) : undefined}
                     title={h.k ? 'Clic para ordenar' : undefined}
                     style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none' }}>
-                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' ↕' : '')}
+                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' â–²' : ' â–¼') : (h.k ? ' â†•' : '')}
                   </th>
                 ))}
               </tr>
@@ -228,15 +231,15 @@ function Compras({ pedido, onPedidoUsado }) {
                       {s.categoria}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.unidad || '—'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.cantidad ?? '—'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.unidad || 'â€”'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.cantidad ?? 'â€”'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || 'â€”'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(s.ultima_fecha_compra)}</td>
-                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.moneda_pago || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.moneda_pago || 'â€”'}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: s.ultimo_precio ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
                     {formatPrecio(s.ultimo_precio, s.moneda_pago)}
                   </td>
-                  <td style={{ padding: '10px 14px', fontWeight: 600, color: formatTotal(s) !== '—' ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 600, color: formatTotal(s) !== 'â€”' ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
                     {formatTotal(s)}
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatDocumento(s)}</td>
@@ -247,7 +250,7 @@ function Compras({ pedido, onPedidoUsado }) {
                         color: s.estado_recepcion === 'Recibido' ? '#1a7a3c' : '#a15c00',
                         padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
                       }}>{s.estado_recepcion}</span>
-                    ) : '—'}
+                    ) : 'â€”'}
                   </td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     {s.estado_recepcion === 'Por recibir' && (
@@ -286,9 +289,9 @@ function Compras({ pedido, onPedidoUsado }) {
       {confirmEliminar && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, maxWidth: 420, width: '100%' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>¿Eliminar suministro?</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>Â¿Eliminar suministro?</h3>
             <p style={{ color: '#555', fontSize: 14, marginBottom: 24 }}>
-              Se eliminará <strong>{confirmEliminar.nombre}</strong>. Esta acción no se puede deshacer.
+              Se eliminarÃ¡ <strong>{confirmEliminar.nombre}</strong>. Esta acciÃ³n no se puede deshacer.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmEliminar(null)}
