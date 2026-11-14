@@ -1,11 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
-from decimal import Decimal
+from datetime import date
 from ..database import get_db
-from ..models import SolicitudInsumos, SolicitudInsumoItem, Proveedor, EstadoSolicitudInsumos, EstadoProveedor, TipoProveedor
+from ..models import (SolicitudInsumos, SolicitudInsumoItem, Proveedor,
+                      EstadoSolicitudInsumos, EstadoProveedor, TipoProveedor,
+                      CompraSuministro, NivelPermiso)
+from ..auth import get_current_user, require_permiso
+from ..models import Usuario
 
 router = APIRouter(prefix="/solicitudes-insumos", tags=["Solicitudes de Insumos"])
 
@@ -54,13 +58,16 @@ class SolicitudInsumoOut(BaseModel):
     iva_usd: Optional[float]
     total_usd: Optional[float]
     estado: str
+    creado_en: Optional[str] = None
     items: List[ItemOut] = []
     class Config: from_attributes = True
+
+class AprobarItemsIn(BaseModel):
+    item_ids: List[int]
 
 # --- Endpoints ---
 @router.post("/", response_model=SolicitudInsumoOut, status_code=201)
 def crear_solicitud(data: SolicitudInsumoIn, db: Session = Depends(get_db)):
-    # Buscar proveedor por teléfono o crear uno nuevo
     proveedor_id = None
     if data.proveedor_telefono:
         tel = data.proveedor_telefono.strip()
@@ -134,12 +141,12 @@ def obtener_solicitud(id: int, db: Session = Depends(get_db)):
     return s
 
 @router.patch("/{id}/aprobar-items")
-def aprobar_items(id: int, item_ids: List[int], db: Session = Depends(get_db)):
+def aprobar_items(id: int, body: AprobarItemsIn, db: Session = Depends(get_db)):
     s = db.query(SolicitudInsumos).filter(SolicitudInsumos.id == id).first()
     if not s:
         raise HTTPException(404, "No encontrada")
     for item in s.items:
-        item.aprobado = item.id in item_ids
+        item.aprobado = item.id in body.item_ids
     s.estado = EstadoSolicitudInsumos.aprobada
     db.commit()
     return {"ok": True}
@@ -149,6 +156,46 @@ def convertir_compra(id: int, db: Session = Depends(get_db)):
     s = db.query(SolicitudInsumos).filter(SolicitudInsumos.id == id).first()
     if not s:
         raise HTTPException(404, "No encontrada")
+
+    hoy = date.today()
+    items_aprobados = [it for it in s.items if it.aprobado]
+
+    if items_aprobados:
+        for it in items_aprobados:
+            try:
+                cant = float(it.cantidad) if it.cantidad else None
+            except (ValueError, TypeError):
+                cant = None
+            compra = CompraSuministro(
+                suministro_id=it.id,
+                fecha_compra=hoy,
+                cantidad=cant,
+                monto_usd=it.subtotal_usd,
+                nombre=it.descripcion
+            )
+            db.add(compra)
+    else:
+        compra = CompraSuministro(
+            suministro_id=s.id,
+            fecha_compra=hoy,
+            monto_usd=s.total_usd,
+            nombre=f"Cotizacion #{s.id} - {s.proveedor_nombre or 'Sin proveedor'} - {s.obra}"
+        )
+        db.add(compra)
+
     s.estado = EstadoSolicitudInsumos.convertida
     db.commit()
     return {"id": s.id, "estado": s.estado}
+
+@router.delete("/{id}")
+def eliminar_solicitud(
+    id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(require_permiso("*", NivelPermiso.admin))
+):
+    s = db.query(SolicitudInsumos).filter(SolicitudInsumos.id == id).first()
+    if not s:
+        raise HTTPException(404, "No encontrada")
+    db.delete(s)
+    db.commit()
+    return {"ok": True}
