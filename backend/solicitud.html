@@ -176,7 +176,7 @@ function addItem(desc='', cant='', unit='') {
     <input type="number" placeholder="0" min="0" value="${cant}" id="cant-${id}">
     <select id="unit-${id}">
       <option value="und" ${unit==='und'?'selected':''}>und</option>
-      <option value="m²" ${unit==='m²'?'selected':''}>m²</option>
+      <option value="m2" ${unit==='m2'?'selected':''}>m²</option>
       <option value="ml" ${unit==='ml'?'selected':''}>ml</option>
       <option value="kg" ${unit==='kg'?'selected':''}>kg</option>
       <option value="lt" ${unit==='lt'?'selected':''}>lt</option>
@@ -434,11 +434,6 @@ function enviarProveedor() {
   document.getElementById('envio-prov-opts').style.display = 'flex';
 
   // Guardar cotización en la BD
-  const banco = document.getElementById('prov-banco').value.trim();
-  const titular = document.getElementById('prov-titular').value.trim();
-  const cuenta = document.getElementById('prov-cuenta').value.trim();
-  const tipoCuenta = document.getElementById('prov-tipo-cuenta').value;
-  const rif = document.getElementById('prov-rif').value.trim();
   const itemsGuardar = iParams.map((raw, idx) => {
     const [desc, cant, unit] = raw.split('|');
     return {
