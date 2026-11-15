@@ -15,14 +15,14 @@ const CATEGORIAS = [
 ];
 
 function formatFecha(fecha) {
-  if (!fecha) return 'â€”';
+  if (!fecha) return '–';
   const [y, m, d] = fecha.split('-');
   return `${d}/${m}/${y}`;
 }
 
 function formatPrecio(precio, moneda) {
-  if (!precio && precio !== 0) return 'â€”';
-  const simbolo = moneda === 'Euros' ? 'â‚¬' : moneda === 'USDT' ? 'USDT ' : '$';
+  if (!precio && precio !== 0) return '–';
+  const simbolo = moneda === 'Euros' ? '€' : moneda === 'USDT' ? 'USDT ' : '$';
   return `${simbolo}${parseFloat(precio).toFixed(2)}`;
 }
 
@@ -33,16 +33,16 @@ function formatTotal(s) {
   if (s.monto_total_divisa || s.monto_total_divisa === 0) {
     if (s.monto_total_divisa !== null) return formatPrecio(s.monto_total_divisa, s.moneda_pago);
   }
-  return 'â€”';
+  return '–';
 }
 
 function formatBs(valor) {
-  if (!valor && valor !== 0) return 'â€”';
+  if (!valor && valor !== 0) return '–';
   return `Bs ${Number(valor).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDocumento(s) {
-  if (!s.tipo_documento) return 'â€”';
+  if (!s.tipo_documento) return '–';
   if (s.tipo_documento === 'Otro') return s.documento_otro || 'Otro';
   return s.tipo_documento;
 }
@@ -223,7 +223,7 @@ function Compras({ pedido, onPedidoUsado }) {
                     onClick={h.k ? () => cambiarOrden(h.k) : undefined}
                     title={h.k ? 'Clic para ordenar' : undefined}
                     style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none' }}>
-                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' â–²' : ' â–¼') : (h.k ? ' â†•' : '')}
+                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' â†•' : '')}
                   </th>
                 ))}
               </tr>
@@ -237,15 +237,15 @@ function Compras({ pedido, onPedidoUsado }) {
                       {s.categoria}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.unidad || 'â€”'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.cantidad ?? 'â€”'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || 'â€”'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.unidad || '–'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.cantidad ?? '–'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{s.proveedor || '–'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatFecha(s.ultima_fecha_compra)}</td>
-                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.moneda_pago || 'â€”'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.moneda_pago || '–'}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: s.ultimo_precio ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
                     {formatPrecio(s.ultimo_precio, s.moneda_pago)}
                   </td>
-                  <td style={{ padding: '10px 14px', fontWeight: 600, color: formatTotal(s) !== 'â€”' ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 600, color: formatTotal(s) !== '–' ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
                     {formatTotal(s)}
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.numero_documento || '-'}</td>
@@ -257,7 +257,7 @@ function Compras({ pedido, onPedidoUsado }) {
                         color: s.estado_recepcion === 'Recibido' ? '#1a7a3c' : '#a15c00',
                         padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
                       }}>{s.estado_recepcion}</span>
-                    ) : 'â€”'}
+                    ) : '–'}
                   </td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     {s.estado_recepcion === 'Por recibir' && (
@@ -296,7 +296,7 @@ function Compras({ pedido, onPedidoUsado }) {
       {confirmEliminar && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, maxWidth: 420, width: '100%' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>Â¿Eliminar suministro?</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>¿Eliminar suministro?</h3>
             <p style={{ color: '#555', fontSize: 14, marginBottom: 24 }}>
               Se eliminarÃ¡ <strong>{confirmEliminar.nombre}</strong>. Esta acciÃ³n no se puede deshacer.
             </p>
