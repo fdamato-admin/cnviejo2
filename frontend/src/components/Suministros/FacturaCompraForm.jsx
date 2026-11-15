@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import API from '../../api';
 
 const CATEGORIAS = ['Quimicos de piscina','Equipos de piscina','Jardineria y areas verdes','Electricidad','Plomeria / Fontaneria','Planta electrica','Seguridad / Vigilancia','Pintura e impermeabilizacion','Ferreteria y materiales','Limpieza','Aire acondicionado','Informatica y tecnologia','Otro'];
@@ -18,6 +18,7 @@ function calcItem(it) {
 
 export default function FacturaCompraForm({ onClose, onGuardado }) {
   const [ivaD, setIvaD] = useState(16);
+  const [proveedores, setProveedores] = useState([]);
   const [form, setForm] = useState({
     fecha_compra: new Date().toISOString().slice(0,10),
     tipo_documento:'Factura', documento_otro:'', proveedor:'',
@@ -34,6 +35,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
         setItems([iV(r.data.iva_porcentaje)]);
       }
     }).catch(()=>{});
+    API.get('/proveedores/').then(r => setProveedores(r.data || [])).catch(()=>{});
   }, []);
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -102,7 +104,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
           <div style={{marginBottom:10}}><label style={lS}>Fecha *</label><input type="date" value={form.fecha_compra} onChange={e=>setF('fecha_compra',e.target.value)} style={iS}/></div>
           <div style={{marginBottom:10}}><label style={lS}>Tipo doc *</label><select value={form.tipo_documento} onChange={e=>setF('tipo_documento',e.target.value)} style={iS}>{DOCUMENTOS.map(d=><option key={d}>{d}</option>)}</select></div>
           {form.tipo_documento==='Otro' && <div style={{marginBottom:10}}><label style={lS}>Especificar *</label><input value={form.documento_otro} onChange={e=>setF('documento_otro',e.target.value)} style={iS}/></div>}
-          <div style={{marginBottom:10}}><label style={lS}>Proveedor</label><input value={form.proveedor} onChange={e=>setF('proveedor',e.target.value.toUpperCase())} style={iS} placeholder="Nombre"/></div>
+          <div style={{marginBottom:10}}><label style={lS}>Proveedor</label><select value={form.proveedor} onChange={e=>setF('proveedor',e.target.value)} style={iS}><option value="">-- Seleccionar --</option>{proveedores.map(p=><option key={p.id} value={p.nombre}>{p.nombre}</option>)}</select></div>
           <div style={{marginBottom:10}}><label style={lS}>Estado</label><select value={form.estado_recepcion} onChange={e=>setF('estado_recepcion',e.target.value)} style={iS}><option>Por recibir</option><option>Recibido</option></select></div>
           <div style={{marginBottom:10, gridColumn:'1 / -1'}}><label style={lS}>Notas</label><input value={form.notas} onChange={e=>setF('notas',e.target.value)} style={iS} placeholder="Observaciones (opcional)"/></div>
         </div>
