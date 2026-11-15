@@ -7,11 +7,11 @@ import CotizacionesInsumos from './CotizacionesInsumos';
 import FacturaCompraForm from './FacturaCompraForm';
 
 const CATEGORIAS = [
-  'QuÃ­micos de piscina', 'Equipos de piscina', 'JardinerÃ­a y Ã¡reas verdes',
-  'Electricidad', 'PlomerÃ­a / FontanerÃ­a', 'Planta elÃ©ctrica',
-  'Seguridad / Vigilancia', 'Pintura e impermeabilizaciÃ³n',
-  'FerreterÃ­a y materiales', 'Limpieza', 'Aire acondicionado',
-  'InformÃ¡tica y tecnologÃ­a', 'Otro',
+  'Químicos de piscina', 'Equipos de piscina', 'Jardinería y áreas verdes',
+  'Electricidad', 'Plomería / Fontanería', 'Planta eléctrica',
+  'Seguridad / Vigilancia', 'Pintura e impermeabilización',
+  'Ferretería y materiales', 'Limpieza', 'Aire acondicionado',
+  'Informática y tecnología', 'Otro',
 ];
 
 function formatFecha(fecha) {
@@ -223,7 +223,7 @@ function Compras({ pedido, onPedidoUsado }) {
                     onClick={h.k ? () => cambiarOrden(h.k) : undefined}
                     title={h.k ? 'Clic para ordenar' : undefined}
                     style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none' }}>
-                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' â†•' : '')}
+                    {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' ↕' : '')}
                   </th>
                 ))}
               </tr>
@@ -298,7 +298,7 @@ function Compras({ pedido, onPedidoUsado }) {
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, maxWidth: 420, width: '100%' }}>
             <h3 style={{ margin: '0 0 12px', fontSize: 17 }}>¿Eliminar suministro?</h3>
             <p style={{ color: '#555', fontSize: 14, marginBottom: 24 }}>
-              Se eliminarÃ¡ <strong>{confirmEliminar.nombre}</strong>. Esta acciÃ³n no se puede deshacer.
+              Se eliminará <strong>{confirmEliminar.nombre}</strong>. Esta acción no se puede deshacer.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmEliminar(null)}
