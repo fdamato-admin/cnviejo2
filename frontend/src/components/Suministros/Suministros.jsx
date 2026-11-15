@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import SuministroForm from './SuministroForm';
 import PedidosSuministros from './PedidosSuministros';
@@ -169,10 +169,6 @@ function Compras({ pedido, onPedidoUsado }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={abrirNuevo}
-            style={{ padding: '10px 20px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            + Ingresar compra
-          </button>
           <button onClick={() => setModalFactura(true)}
             style={{ padding: '10px 20px', background: '#1a7a3c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
             + Factura / Nota de entrega
@@ -190,7 +186,7 @@ function Compras({ pedido, onPedidoUsado }) {
         />
         <select value={categoria} onChange={e => setCategoria(e.target.value)}
           style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, minWidth: 180 }}>
-          <option value="">Todas las categorÃ­as</option>
+          <option value="">Todas las categorías</option>
           {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -201,7 +197,7 @@ function Compras({ pedido, onPedidoUsado }) {
       ) : suministros.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
           <p style={{ fontSize: 16 }}>No hay suministros registrados</p>
-          <p style={{ fontSize: 13, marginTop: 8 }}>Presiona "Ingresar compra" para agregar el primero</p>
+          <p style={{ fontSize: 13, marginTop: 8 }}>Presiona "+ Factura / Nota de entrega" para agregar el primero</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -210,7 +206,7 @@ function Compras({ pedido, onPedidoUsado }) {
               <tr style={{ background: '#f5f7fa' }}>
                 {[
                   { t: 'Nombre', k: 'nombre' },
-                  { t: 'CategorÃ­a', k: 'categoria' },
+                  { t: 'Categoría', k: 'categoria' },
                   { t: 'Unidad' },
                   { t: 'Cantidad' },
                   { t: 'Proveedor' },
@@ -220,7 +216,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   { t: 'Total' },
                   { t: 'N Documento' },
                   { t: 'Documento' },
-                  { t: 'RecepciÃ³n' },
+                  { t: 'Recepción' },
                   { t: '' },
                 ].map(h => (
                   <th key={h.t || 'acciones'}
