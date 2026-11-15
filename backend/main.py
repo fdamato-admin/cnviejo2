@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.api import proveedores, trabajos, auth, suministros, respaldos
@@ -6,6 +6,14 @@ from app.api import auditoria
 from app.api import caja
 
 Base.metadata.create_all(bind=engine)
+
+# Migraciones incrementales
+with engine.connect() as _conn:
+    try:
+        _conn.execute(__import__('sqlalchemy').text('ALTER TABLE suministros ADD COLUMN numero_documento VARCHAR(100)'))
+        _conn.commit()
+    except Exception:
+        pass
 
 def _migrar_suministros():
     from sqlalchemy import text

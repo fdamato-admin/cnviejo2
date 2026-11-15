@@ -22,7 +22,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
   const [suministrosLista, setSuministrosLista] = useState([]);
   const [form, setForm] = useState({
     fecha_compra: new Date().toISOString().slice(0,10),
-    tipo_documento:'Factura', documento_otro:'', proveedor:'',
+    tipo_documento:'Factura', documento_otro:'', numero_documento:'', proveedor:'',
     estado_recepcion:'Recibido', notas:''
   });
   const [items, setItems] = useState([iV(16)]);
@@ -106,6 +106,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
           <div style={{marginBottom:10}}><label style={lS}>Fecha *</label><input type="date" value={form.fecha_compra} onChange={e=>setF('fecha_compra',e.target.value)} style={iS}/></div>
           <div style={{marginBottom:10}}><label style={lS}>Tipo doc *</label><select value={form.tipo_documento} onChange={e=>setF('tipo_documento',e.target.value)} style={iS}>{DOCUMENTOS.map(d=><option key={d}>{d}</option>)}</select></div>
           {form.tipo_documento==='Otro' && <div style={{marginBottom:10}}><label style={lS}>Especificar *</label><input value={form.documento_otro} onChange={e=>setF('documento_otro',e.target.value)} style={iS}/></div>}
+          <div style={{marginBottom:10}}><label style={lS}>N Documento</label><input value={form.numero_documento} onChange={e=>setF('numero_documento',e.target.value)} style={iS} placeholder="Ej: 00123"/></div>
           <div style={{marginBottom:10}}><label style={lS}>Proveedor</label><select value={form.proveedor} onChange={e=>setF('proveedor',e.target.value)} style={iS}><option value="">-- Seleccionar --</option>{proveedores.map(p=><option key={p.id} value={p.nombre}>{p.nombre}</option>)}</select></div>
           <div style={{marginBottom:10}}><label style={lS}>Estado</label><select value={form.estado_recepcion} onChange={e=>setF('estado_recepcion',e.target.value)} style={iS}><option>Por recibir</option><option>Recibido</option></select></div>
           <div style={{marginBottom:10, gridColumn:'1 / -1'}}><label style={lS}>Notas</label><input value={form.notas} onChange={e=>setF('notas',e.target.value)} style={iS} placeholder="Observaciones (opcional)"/></div>

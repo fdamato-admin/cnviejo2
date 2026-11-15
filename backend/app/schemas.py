@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+﻿from pydantic import BaseModel
 from typing import Optional, List
 from decimal import Decimal
 from datetime import datetime
@@ -157,6 +157,7 @@ class SuministroBase(BaseModel):
     tasa_cambio: Optional[float] = None
     tipo_documento: Optional[str] = None
     documento_otro: Optional[str] = None
+    numero_documento: Optional[str] = None
     iva_bs: Optional[float] = None
     monto_total_bs: Optional[float] = None
     moneda_pago: Optional[str] = None

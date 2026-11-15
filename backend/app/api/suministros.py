@@ -153,6 +153,7 @@ class _FacturaIn(BaseModel):
     fecha_compra: str
     tipo_documento: str
     documento_otro: Optional[str] = ""
+    numero_documento: Optional[str] = ""
     proveedor: Optional[str] = ""
     estado_recepcion: Optional[str] = "Recibido"
     notas: Optional[str] = ""
@@ -194,6 +195,7 @@ def ingresar_factura(data: _FacturaIn, db: Session = Depends(get_db)):
             moneda_pago=it.moneda_pago,
             tipo_documento=data.tipo_documento,
             documento_otro=data.documento_otro or None,
+            numero_documento=data.numero_documento or None,
             estado_recepcion=data.estado_recepcion or "Recibido",
             notas=data.notas or None,
             iva_porcentaje=iva_pct if it.aplica_iva else None,

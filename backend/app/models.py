@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, ForeignKey, Numeric
+﻿from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -142,6 +142,7 @@ class Suministro(Base):
     tasa_cambio = Column(Float, nullable=True)
     tipo_documento = Column(String(30), nullable=True)
     documento_otro = Column(String(150), nullable=True)
+    numero_documento = Column(String(100), nullable=True)
     iva_bs = Column(Float, nullable=True)
     monto_total_bs = Column(Float, nullable=True)
     moneda_pago = Column(String(10), nullable=True)
