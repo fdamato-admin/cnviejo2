@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Solicitud de Materiales</title>
+<title>Solicitud de Insumos</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; padding: 16px; }
-  .card { background: #fff; border-radius: 14px; padding: 24px; max-width: 640px; margin: 0 auto; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+  .card { background: #fff; border-radius: 14px; padding: 24px; max-width: 700px; margin: 0 auto; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
   h1 { font-size: 18px; font-weight: 700; color: #1a3a5c; margin-bottom: 4px; }
   .sub { font-size: 13px; color: #888; margin-bottom: 24px; }
   label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; margin-top: 14px; }
@@ -33,28 +33,30 @@
   .pago-opts label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; color: #333; margin-top: 0; cursor: pointer; }
   .pago-opts input[type=checkbox] { width: auto; }
   .readonly-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  .readonly-table th { background: #f0f4f8; padding: 8px 10px; text-align: left; font-size: 12px; color: #555; }
-  .readonly-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+  .readonly-table th { background: #1a3a5c; color: #fff; padding: 8px 8px; text-align: left; font-size: 11px; white-space: nowrap; }
+  .readonly-table td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  .readonly-table tr:nth-child(even) td { background: #f8fafc; }
   .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  #tabla-proveedor-wrap { display: none; }
+  #tabla-proveedor-wrap { display: none; overflow-x: auto; }
   .info-box { background: #e8f0fe; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #1a3a5c; margin-bottom: 16px; }
+  .iva-input { width: 52px !important; padding: 5px 6px !important; font-size: 12px !important; }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <h1>Solicitud de Materiales</h1>
+  <h1>Solicitud de Insumos</h1>
   <p class="sub">Complete los campos y presione enviar</p>
 
   <div class="mode-tabs">
-    <button class="mode-tab active" onclick="setMode('contratista')">📋 Soy el Solicitante</button>
-    <button class="mode-tab" onclick="setMode('proveedor')">💼 Soy el Proveedor</button>
+    <button class="mode-tab active" onclick="setMode('contratista')">ðŸ“‹ Soy el Solicitante</button>
+    <button class="mode-tab" onclick="setMode('proveedor')">ðŸ’¼ Soy el Proveedor</button>
   </div>
 
   <!-- PANEL CONTRATISTA -->
   <div id="panel-contratista" class="panel active">
-    <label>Descripción general del trabajo / obra</label>
-    <input type="text" id="obra" placeholder="Ej: Reparación de techo área común" />
+    <label>DescripciÃ³n general del trabajo / obra</label>
+    <input type="text" id="obra" placeholder="Ej: ReparaciÃ³n de techo Ã¡rea comÃºn" />
 
     <label>Fecha requerida de entrega</label>
     <input type="date" id="fecha-req" />
@@ -64,44 +66,48 @@
 
     <div class="section-title">Listado de materiales</div>
     <div class="items-header">
-      <span>Descripción</span><span>Cantidad</span><span>Unidad</span><span></span>
+      <span>DescripciÃ³n</span><span>Cantidad</span><span>Unidad</span><span></span>
     </div>
     <div id="items-list"></div>
-    <button class="btn-add" onclick="addItem()">+ Agregar ítem</button>
+    <button class="btn-add" onclick="addItem()">+ Agregar Ã­tem</button>
 
-    <button class="btn-send" onclick="enviarContratista()">📧 Enviar solicitud a la Junta</button>
+    <button class="btn-send" onclick="generarEnlace()">ðŸ”— Generar enlace para proveedores</button>
+    <div id="enlace-box" style="display:none;margin-top:14px;background:#e8f0fe;border-radius:10px;padding:14px 16px">
+      <div style="font-size:12px;font-weight:600;color:#1a3a5c;margin-bottom:8px">Enlace listo â€” pÃ©galo en WhatsApp a cada proveedor:</div>
+      <div id="enlace-texto" style="font-size:12px;color:#333;word-break:break-all;background:#fff;border-radius:6px;padding:8px 10px;border:1px solid #c8d8f0;margin-bottom:10px"></div>
+      <button onclick="copiarEnlace()" id="btn-copiar" style="width:100%;padding:12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">ðŸ“‹ Copiar enlace</button>
+    </div>
   </div>
 
   <!-- PANEL PROVEEDOR -->
   <div id="panel-proveedor" class="panel">
-    <div class="info-box">Complete los precios y condiciones, luego presione <strong>Enviar cotización</strong>.</div>
+    <div class="info-box">Complete los precios y condiciones, luego presione <strong>Enviar cotizaciÃ³n</strong>.</div>
 
     <label>Nombre / Empresa</label>
-    <input type="text" id="prov-nombre" placeholder="Nombre o razón social" />
+    <input type="text" id="prov-nombre" placeholder="Nombre o razÃ³n social" />
 
-    <label>Teléfono de contacto</label>
+    <label>TelÃ©fono de contacto</label>
     <input type="tel" id="prov-tel" placeholder="+58 412 000 0000" />
 
     <label>Validez de la oferta</label>
-    <input type="text" id="prov-validez" placeholder="Ej: 3 días hábiles" />
+    <input type="text" id="prov-validez" placeholder="Ej: 3 dÃ­as hÃ¡biles" />
 
     <label>Tiempo de entrega</label>
-    <input type="text" id="prov-entrega" placeholder="Ej: 48 horas después de aprobación" />
+    <input type="text" id="prov-entrega" placeholder="Ej: 48 horas despuÃ©s de aprobaciÃ³n" />
 
     <label>Condiciones de pago</label>
     <div class="pago-opts">
       <label><input type="checkbox" id="pago-nd"> Nota de entrega</label>
       <label><input type="checkbox" id="pago-fac"> Factura</label>
       <label><input type="checkbox" id="pago-amb"> Ambas</label>
-
     </div>
 
-    <div class="section-title">Datos bancarios (en caso de aprobación)</div>
+    <div class="section-title">Datos bancarios (en caso de aprobaciÃ³n)</div>
     <label>Banco</label>
     <input type="text" id="prov-banco" placeholder="Ej: Banesco, Mercantil, Bod..." />
     <label>Titular de la cuenta</label>
     <input type="text" id="prov-titular" placeholder="Nombre completo del titular" />
-    <label>N° de cuenta</label>
+    <label>NÂ° de cuenta</label>
     <input type="text" id="prov-cuenta" placeholder="Ej: 0134-0000-00-0000000000" />
     <label>Tipo de cuenta</label>
     <select id="prov-tipo-cuenta">
@@ -109,30 +115,61 @@
       <option>Corriente</option>
       <option>Ahorro</option>
     </select>
-    <label>RIF / Cédula</label>
+    <label>RIF / CÃ©dula</label>
     <input type="text" id="prov-rif" placeholder="Ej: J-12345678-9 o V-12345678" />
     <label style="margin-top:14px">Observaciones del proveedor (opcional)</label>
     <textarea id="prov-obs" placeholder="Condiciones especiales, disponibilidad, etc."></textarea>
 
-    <div class="section-title">Precios por ítem</div>
+    <div class="section-title">Precios por Ã­tem</div>
 
     <div id="tabla-proveedor-wrap">
       <table class="readonly-table" id="tabla-precios">
-        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Tasa Bs./USD</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
+        <thead><tr>
+          <th>#</th>
+          <th>DescripciÃ³n solicitada</th>
+          <th>Cant.</th>
+          <th>Unidad</th>
+          <th>Producto ofrecido</th>
+          <th>Precio unit. (USD)</th>
+          <th>Precio unit. (Bs.)</th>
+          <th style="text-align:center">IVA</th>
+          <th>%IVA</th>
+          <th>Subtotal (USD)</th>
+        </tr></thead>
         <tbody id="tbody-precios"></tbody>
       </table>
     </div>
 
     <div id="items-prov-manual" style="display:none"></div>
 
-    <div id="resumen-total" style="display:none;background:#1a3a5c;color:#fff;border-radius:10px;padding:14px 18px;margin-top:16px;text-align:right">
-      <span style="font-size:13px;opacity:0.8">TOTAL ESTIMADO USD</span><br>
-      <span id="total-usd" style="font-size:24px;font-weight:700">$0.00</span>
+    <div style="margin-top:16px;display:flex;align-items:center;gap:10px;background:#f0f4f8;border-radius:8px;padding:12px 14px">
+      <label style="font-size:13px;font-weight:600;color:#1a3a5c;white-space:nowrap;margin:0">Tasa Bs./USD:</label>
+      <input type="number" step="0.01" min="0" id="tasa-global" placeholder="Ej: 46.50" oninput="recalcAllRows()" style="width:120px;padding:8px 10px;border:1px solid #c0d0e0;border-radius:6px;font-size:14px;font-weight:600">
+      <span style="font-size:12px;color:#666">Se aplica a todos los Ã­tems</span>
     </div>
-    <button class="btn-send" onclick="enviarProveedor()">Preparar cotización</button>
+
+    <div id="resumen-total" style="display:none;background:#1a3a5c;color:#fff;border-radius:10px;padding:14px 18px;margin-top:12px;text-align:right">
+      <span style="font-size:13px;opacity:0.8">SUBTOTAL USD</span><br>
+      <span id="total-usd" style="font-size:22px;font-weight:700">$0.00</span>
+      <div id="bs-total-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
+        <span style="font-size:13px;opacity:0.8">SUBTOTAL Bs.</span><br>
+        <span id="total-bs" style="font-size:16px;font-weight:600">Bs. 0,00</span>
+      </div>
+      <div id="iva-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
+        <span style="font-size:13px;opacity:0.8">IVA</span><br>
+        <span id="iva-usd" style="font-size:16px;font-weight:600">$0.00</span>
+        <span id="iva-bs" style="font-size:13px;opacity:0.8;display:block"></span>
+      </div>
+      <div id="total-final-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.3)">
+        <span style="font-size:13px;opacity:0.8">TOTAL CON IVA USD</span><br>
+        <span id="total-final-usd" style="font-size:24px;font-weight:700">$0.00</span>
+        <span id="total-final-bs" style="font-size:14px;opacity:0.8;display:block"></span>
+      </div>
+    </div>
+    <button class="btn-send" onclick="enviarProveedor()">Preparar cotizaciÃ³n</button>
     <div id="envio-prov-opts" style="display:none;gap:10px;margin-top:12px;flex-wrap:wrap">
-      <button id="btn-email-prov" class="btn-send" style="background:#1a3a5c;flex:1">📧 Enviar por Email</button>
-      <button id="btn-wa-prov" class="btn-send" style="background:#25d366;flex:1">📱 Enviar por WhatsApp</button>
+      <button id="btn-email-prov" class="btn-send" style="background:#1a3a5c;flex:1">ðŸ“§ Enviar por Email</button>
+      <button id="btn-wa-prov" class="btn-send" style="background:#25d366;flex:1">ðŸ“± Enviar por WhatsApp</button>
     </div>
   </div>
 </div>
@@ -141,7 +178,6 @@
 const CORREO_JUNTA = 'ferdama27@gmail.com';
 const WHATSAPP_JUNTA = '584140213991';
 let itemCount = 0;
-let itemsData = []; // para pasar de contratista a proveedor vía URL
 
 function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
@@ -158,11 +194,11 @@ function addItem(desc='', cant='', unit='') {
   div.className = 'item-row';
   div.id = 'item-' + id;
   div.innerHTML = `
-    <input type="text" placeholder="Descripción del material" value="${desc}" id="desc-${id}">
+    <input type="text" placeholder="DescripciÃ³n del material" value="${desc}" id="desc-${id}">
     <input type="number" placeholder="0" min="0" value="${cant}" id="cant-${id}">
     <select id="unit-${id}">
       <option value="und" ${unit==='und'?'selected':''}>und</option>
-      <option value="m²" ${unit==='m²'?'selected':''}>m²</option>
+      <option value="m2" ${unit==='m2'?'selected':''}>mÂ²</option>
       <option value="ml" ${unit==='ml'?'selected':''}>ml</option>
       <option value="kg" ${unit==='kg'?'selected':''}>kg</option>
       <option value="lt" ${unit==='lt'?'selected':''}>lt</option>
@@ -171,7 +207,7 @@ function addItem(desc='', cant='', unit='') {
       <option value="caja" ${unit==='caja'?'selected':''}>caja</option>
       <option value="global" ${unit==='global'?'selected':''}>global</option>
     </select>
-    <button class="btn-del" onclick="removeItem(${id})">×</button>
+    <button class="btn-del" onclick="removeItem(${id})">Ã—</button>
   `;
   document.getElementById('items-list').appendChild(div);
 }
@@ -193,38 +229,94 @@ function getItems() {
   return items;
 }
 
-function enviarContratista() {
+let _enlaceGenerado = '';
+
+function buildSolicitudData() {
   const obra = document.getElementById('obra').value.trim();
   const fechaReq = document.getElementById('fecha-req').value;
   const obs = document.getElementById('obs').value.trim();
   const items = getItems();
 
-  if (!obra) { alert('Indique el trabajo / obra.'); return; }
-  if (items.length === 0) { alert('Agregue al menos un ítem.'); return; }
+  if (!obra) { alert('Indique el trabajo / obra.'); return null; }
+  if (items.length === 0) { alert('Agregue al menos un Ã­tem.'); return null; }
 
   const fecha = new Date().toLocaleDateString('es-VE');
   let tabla = '';
-  items.forEach((it, i) => {
-    tabla += `${i+1}. ${it.desc} — ${it.cant} ${it.unit}\n`;
-  });
+  items.forEach((it, i) => { tabla += `${i+1}. ${it.desc} â€” ${it.cant} ${it.unit}\n`; });
 
   const paramsItems = items.map(it => `i=${encodeURIComponent(it.desc+'|'+it.cant+'|'+it.unit)}`).join('&');
   const urlProv = window.location.href.split('?')[0] + '?modo=proveedor&obra=' + encodeURIComponent(obra) + '&' + paramsItems;
 
-  const asunto = `Solicitud de materiales — ${obra} — ${fecha}`;
   let cuerpo = `SOLICITUD DE MATERIALES\n`;
   cuerpo += `Fecha: ${fecha}\n`;
   cuerpo += `Trabajo / Obra: ${obra}\n`;
   if (fechaReq) cuerpo += `Fecha requerida de entrega: ${fechaReq}\n`;
   cuerpo += `\nLISTA DE MATERIALES:\n`;
-  cuerpo += `─────────────────────────────\n`;
+  cuerpo += `â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n`;
   cuerpo += tabla;
-  cuerpo += `─────────────────────────────\n`;
+  cuerpo += `â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n`;
   if (obs) cuerpo += `\nObservaciones: ${obs}\n`;
-  cuerpo += `\n────────────────────────────────────────\n`;
-  cuerpo += `Para proveedores: abra este enlace para completar su cotización:\n${urlProv}`;
+  cuerpo += `\nPara cotizar, abra este enlace:\n${urlProv}`;
 
-  window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  return { obra, fecha, cuerpo, urlProv };
+}
+
+function generarEnlace() {
+  const data = buildSolicitudData();
+  if (!data) return;
+  _enlaceGenerado = data.urlProv;
+  document.getElementById('enlace-texto').textContent = data.urlProv;
+  document.getElementById('enlace-box').style.display = 'block';
+  document.getElementById('btn-copiar').textContent = 'ðŸ“‹ Copiar enlace';
+}
+
+function copiarEnlace() {
+  if (!_enlaceGenerado) return;
+  navigator.clipboard.writeText(_enlaceGenerado).then(() => {
+    document.getElementById('btn-copiar').textContent = 'âœ… Enlace copiado';
+    setTimeout(() => { document.getElementById('btn-copiar').textContent = 'ðŸ“‹ Copiar enlace'; }, 2500);
+  }).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = _enlaceGenerado;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    document.getElementById('btn-copiar').textContent = 'âœ… Enlace copiado';
+    setTimeout(() => { document.getElementById('btn-copiar').textContent = 'ðŸ“‹ Copiar enlace'; }, 2500);
+  });
+}
+
+function crearFilaIva(idx, desc, cant, unit, esURL) {
+  const tr = document.createElement('tr');
+  if (esURL) {
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${desc||''}</td>
+      <td>${cant||''}</td>
+      <td>${unit||''}</td>
+      <td><input type="text" placeholder="Marca / presentaciÃ³n alternativa" id="alt-${idx}" style="width:140px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRow(${idx})" style="width:85px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+      <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">â€”</td>
+      <td style="text-align:center"><input type="checkbox" id="iva-chk-${idx}" checked onchange="recalcRow(${idx})" style="width:16px;height:16px;cursor:pointer"></td>
+      <td><input type="number" min="0" max="100" step="0.01" value="16" id="iva-pct-${idx}" oninput="recalcRow(${idx})" class="iva-input"></td>
+      <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">â€”</td>
+    `;
+  } else {
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td><input type="text" placeholder="DescripciÃ³n solicitada" id="desc-prov-${idx}" style="width:130px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+      <td><input type="number" placeholder="0" id="cant-prov-${idx}" oninput="recalcRowManual(${idx})" style="width:55px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+      <td><input type="text" placeholder="und" id="unit-prov-${idx}" style="width:45px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+      <td><input type="text" placeholder="Marca alternativa" id="alt-${idx}" style="width:120px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:12px"></td>
+      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:5px 7px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
+      <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">â€”</td>
+      <td style="text-align:center"><input type="checkbox" id="iva-chk-${idx}" checked onchange="recalcRowManual(${idx})" style="width:16px;height:16px;cursor:pointer"></td>
+      <td><input type="number" min="0" max="100" step="0.01" value="16" id="iva-pct-${idx}" oninput="recalcRowManual(${idx})" class="iva-input"></td>
+      <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">â€”</td>
+    `;
+  }
+  return tr;
 }
 
 function loadItemsFromURL() {
@@ -232,32 +324,18 @@ function loadItemsFromURL() {
   const obra = params.get('obra') || '';
   const iParams = params.getAll('i');
 
+  document.getElementById('tabla-proveedor-wrap').style.display = 'block';
+  const tbody = document.getElementById('tbody-precios');
+  tbody.innerHTML = '';
+
   if (!iParams.length) {
-    document.getElementById('tabla-proveedor-wrap').style.display = 'block';
-    document.getElementById('items-prov-manual').style.display = 'none';
-    // Generar tabla vacía con 5 filas para llenar manualmente
-    const tbody = document.getElementById('tbody-precios');
-    tbody.innerHTML = '';
     for (let idx = 0; idx < 5; idx++) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${idx+1}</td>
-        <td><input type="text" placeholder="Descripción solicitada" id="desc-prov-${idx}" style="width:140px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" placeholder="0" id="cant-prov-${idx}" oninput="recalcRowManual(${idx})" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="text" placeholder="und" id="unit-prov-${idx}" style="width:50px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="text" placeholder="Marca alternativa" id="alt-${idx}" style="width:130px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-        <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
-        <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
-      `;
-      tbody.appendChild(tr);
+      tbody.appendChild(crearFilaIva(idx, '', '', '', false));
     }
     window._manualMode = true;
     return;
   }
 
-  document.getElementById('tabla-proveedor-wrap').style.display = 'block';
   if (obra) {
     const info = document.createElement('div');
     info.style = 'font-size:13px;color:#555;margin-bottom:8px';
@@ -265,40 +343,105 @@ function loadItemsFromURL() {
     document.getElementById('tabla-proveedor-wrap').prepend(info);
   }
 
-  const tbody = document.getElementById('tbody-precios');
-  tbody.innerHTML = '';
   iParams.forEach((raw, idx) => {
     const [desc, cant, unit] = raw.split('|');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${idx+1}</td>
-      <td>${desc||''}</td>
-      <td>${cant||''}</td>
-      <td>${unit||''}</td>
-      <td><input type="text" placeholder="Marca / presentación alternativa" id="alt-${idx}" style="width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td><input type="number" step="0.01" min="0" placeholder="0.00" id="tasa-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
-      <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
-      <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
-    `;
-    tbody.appendChild(tr);
+    tbody.appendChild(crearFilaIva(idx, desc, cant, unit, true));
   });
   window._provItems = iParams;
 }
 
-function addProvItem() {
-  const wrap = document.getElementById('items-prov-manual');
-  const id = Date.now();
-  const div = document.createElement('div');
-  div.className = 'item-row';
-  div.style.marginBottom = '8px';
-  div.innerHTML = `
-    <input type="text" placeholder="Descripción" id="pd-${id}">
-    <input type="number" placeholder="0" id="pc-${id}">
-    <input type="text" placeholder="und" id="pu-${id}" style="width:70px">
-    <input type="number" step="0.01" placeholder="$" id="pp-${id}" style="width:80px">
-  `;
-  wrap.appendChild(div);
+function getTasaGlobal() {
+  return parseFloat(document.getElementById('tasa-global')?.value || 0);
+}
+
+function getIvaFila(idx) {
+  const aplica = document.getElementById('iva-chk-' + idx)?.checked ?? true;
+  const pct = aplica ? (parseFloat(document.getElementById('iva-pct-' + idx)?.value || 16)) : 0;
+  return { aplica, pct };
+}
+
+function recalcRow(idx) {
+  const precio = parseFloat(document.getElementById('precio-' + idx)?.value || 0);
+  const tasa = getTasaGlobal();
+  const params = new URLSearchParams(window.location.search);
+  const iParams = params.getAll('i');
+  const cant = iParams[idx] ? parseFloat(iParams[idx].split('|')[1] || 1) : 1;
+  const { pct } = getIvaFila(idx);
+  const precioBS = tasa ? precio * tasa : 0;
+  const sub = precio * cant;
+  const ivaMonto = sub * pct / 100;
+  const totalItem = sub + ivaMonto;
+  document.getElementById('bs-' + idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : 'â€”';
+  document.getElementById('sub-' + idx).textContent = precio ? '$' + totalItem.toFixed(2) : 'â€”';
+  // recalc totales
+  let subtotalSum = 0, ivaSum = 0;
+  iParams.forEach((_, i) => {
+    const p = parseFloat(document.getElementById('precio-' + i)?.value || 0);
+    const c = parseFloat(iParams[i].split('|')[1] || 1);
+    const { pct: ip } = getIvaFila(i);
+    const s = p * c;
+    subtotalSum += s;
+    ivaSum += s * ip / 100;
+  });
+  document.getElementById('total-usd').textContent = '$' + subtotalSum.toFixed(2);
+  window._calcSub = subtotalSum;
+  window._calcIva = ivaSum;
+  recalcAllRows();
+}
+
+function recalcRowManual(idx) {
+  const precio = parseFloat(document.getElementById('precio-' + idx)?.value || 0);
+  const tasa = getTasaGlobal();
+  const cant = parseFloat(document.getElementById('cant-prov-' + idx)?.value || 1);
+  const { pct } = getIvaFila(idx);
+  const precioBS = tasa ? precio * tasa : 0;
+  const sub = precio * cant;
+  const ivaMonto = sub * pct / 100;
+  const totalItem = sub + ivaMonto;
+  document.getElementById('bs-' + idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : 'â€”';
+  document.getElementById('sub-' + idx).textContent = precio ? '$' + totalItem.toFixed(2) : 'â€”';
+  let subtotalSum = 0, ivaSum = 0;
+  for (let i = 0; i < 5; i++) {
+    const p = parseFloat(document.getElementById('precio-' + i)?.value || 0);
+    const c = parseFloat(document.getElementById('cant-prov-' + i)?.value || 1);
+    const { pct: ip } = getIvaFila(i);
+    const s = p * c;
+    subtotalSum += s;
+    ivaSum += s * ip / 100;
+  }
+  document.getElementById('total-usd').textContent = '$' + subtotalSum.toFixed(2);
+  window._calcSub = subtotalSum;
+  window._calcIva = ivaSum;
+  recalcAllRows();
+}
+
+function recalcAllRows() {
+  const tasa = getTasaGlobal();
+  const params = new URLSearchParams(window.location.search);
+  const iParams = params.getAll('i');
+  if (iParams.length) {
+    iParams.forEach((raw, idx) => {
+      const cant = parseFloat(raw.split('|')[1] || 1);
+      const precio = parseFloat(document.getElementById('precio-' + idx)?.value || 0);
+      const precioBS = tasa ? precio * tasa : 0;
+      const bsEl = document.getElementById('bs-' + idx);
+      if (bsEl) bsEl.textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : 'â€”';
+    });
+  } else {
+    for (let i = 0; i < 5; i++) {
+      const precio = parseFloat(document.getElementById('precio-' + i)?.value || 0);
+      const precioBS = tasa ? precio * tasa : 0;
+      const bsEl = document.getElementById('bs-' + i);
+      if (bsEl) bsEl.textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : 'â€”';
+    }
+  }
+  const totalUSD = parseFloat((document.getElementById('total-usd').textContent||'').replace('$','')) || 0;
+  if (tasa && totalUSD) {
+    document.getElementById('total-bs').textContent = 'Bs. ' + (totalUSD * tasa).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('bs-total-row').style.display = 'block';
+  } else {
+    document.getElementById('bs-total-row').style.display = 'none';
+  }
 }
 
 function enviarProveedor() {
@@ -312,7 +455,6 @@ function enviarProveedor() {
   if (document.getElementById('pago-nd').checked) pagos.push('Nota de entrega');
   if (document.getElementById('pago-fac').checked) pagos.push('Factura');
   if (document.getElementById('pago-amb').checked) pagos.push('Ambas');
-  
 
   if (!nombre) { alert('Indique su nombre o empresa.'); return; }
 
@@ -320,59 +462,142 @@ function enviarProveedor() {
   const params = new URLSearchParams(window.location.search);
   const obra = params.get('obra') || 'Sin especificar';
   const iParams = params.getAll('i') || window._provItems || [];
+  const tasa = getTasaGlobal();
 
   let tabla = '';
-  let total = 0;
+  let subtotalTotal = 0, ivaTotal = 0;
 
-  const tasa_global = document.getElementById('tasa-global')?.value;
   if (iParams.length) {
     iParams.forEach((raw, idx) => {
       const [desc, cant, unit] = raw.split('|');
-      const alt = document.getElementById('alt-'+idx)?.value.trim() || '';
-      const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-      const tasa = parseFloat(document.getElementById('tasa-'+idx)?.value || 0);
+      const alt = document.getElementById('alt-' + idx)?.value.trim() || '';
+      const precio = parseFloat(document.getElementById('precio-' + idx)?.value || 0);
       const cantNum = parseFloat(cant || 1);
-      const subtotal = precio * cantNum;
+      const { aplica, pct } = getIvaFila(idx);
       const precioBS = tasa ? precio * tasa : 0;
-      total += subtotal;
-      tabla += `${idx+1}. Solicitado: ${desc} — ${cant} ${unit}\n`;
+      const sub = precio * cantNum;
+      const ivaMonto = sub * pct / 100;
+      const totalItem = sub + ivaMonto;
+      subtotalTotal += sub;
+      ivaTotal += ivaMonto;
+      tabla += `${idx+1}. ${desc} â€” ${cant} ${unit}\n`;
       if (alt) tabla += `   Ofrecido: ${alt}\n`;
-      tabla += `   Precio: $${precio.toFixed(2)}/u`;
-      if (tasa) tabla += ` | Tasa: ${tasa} Bs./USD | Precio Bs.: ${(precioBS).toFixed(2)}`;
-      tabla += ` | Subtotal: $${subtotal.toFixed(2)}\n`;
+      tabla += `   $${precio.toFixed(2)}/u`;
+      if (tasa && precio) tabla += ` | Bs. ${precioBS.toFixed(2)}/u`;
+      tabla += ` | Sub: $${sub.toFixed(2)}`;
+      if (aplica && ivaMonto > 0) {
+        tabla += ` | IVA ${pct}%: $${ivaMonto.toFixed(2)} | Total: $${totalItem.toFixed(2)}`;
+        if (tasa) tabla += ` / Bs. ${(totalItem * tasa).toFixed(2)}`;
+      } else {
+        tabla += ` (Exento IVA)`;
+        if (tasa && sub) tabla += ` / Bs. ${(sub * tasa).toFixed(2)}`;
+      }
+      tabla += `\n`;
     });
   }
 
-  const asunto = `Cotización — ${nombre} — ${obra} — ${fecha}`;
-  let cuerpo = `COTIZACIÓN DE MATERIALES\n`;
-  cuerpo += `─────────────────────────────\n`;
-  cuerpo += `Proveedor: ${nombre}\n`;
-  if (tel) cuerpo += `Teléfono: ${tel}\n`;
-  cuerpo += `Fecha: ${fecha}\n`;
-  cuerpo += `Obra: ${obra}\n`;
-  cuerpo += `─────────────────────────────\n\n`;
-  if (tabla) {
-    cuerpo += `PRECIOS:\n${tabla}\n`;
-    cuerpo += `TOTAL ESTIMADO USD: $${total.toFixed(2)}\n\n`;
+  const totalFinal = subtotalTotal + ivaTotal;
+  const totalBS = tasa ? subtotalTotal * tasa : 0;
+  const ivaBS = tasa ? ivaTotal * tasa : 0;
+  const totalFinalBS = tasa ? totalFinal * tasa : 0;
+  const hayIva = ivaTotal > 0;
+
+  // Resumen visual
+  document.getElementById('total-usd').textContent = '$' + subtotalTotal.toFixed(2);
+  if (tasa) {
+    document.getElementById('total-bs').textContent = 'Bs. ' + totalBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('bs-total-row').style.display = 'block';
   }
-  cuerpo += `─────────────────────────────\n`;
-  if (validez) cuerpo += `Validez de la oferta: ${validez}\n`;
-  if (entrega) cuerpo += `Tiempo de entrega: ${entrega}\n`;
-  if (pagos.length) cuerpo += `Condiciones de pago: ${pagos.join(', ')}\n`;
-  if (obsP) cuerpo += `\nObservaciones: ${obsP}\n`;
+  if (hayIva) {
+    document.getElementById('iva-usd').textContent = '$' + ivaTotal.toFixed(2);
+    if (tasa) document.getElementById('iva-bs').textContent = 'Bs. ' + ivaBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('total-final-usd').textContent = '$' + totalFinal.toFixed(2);
+    if (tasa) document.getElementById('total-final-bs').textContent = 'Bs. ' + totalFinalBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('iva-row').style.display = 'block';
+    document.getElementById('total-final-row').style.display = 'block';
+  }
+  document.getElementById('resumen-total').style.display = 'block';
+  document.getElementById('envio-prov-opts').style.display = 'flex';
+
+  // Mensaje texto
+  const sep = '--------------------------------';
+  const asunto = `Cotizacion ${nombre} | ${obra} | ${fecha}`;
+  let cuerpo = `*COTIZACION DE INSUMOS*\n${sep}\n`;
+  cuerpo += `Proveedor: *${nombre}*\n`;
+  if (tel) cuerpo += `Tel: ${tel}\n`;
+  cuerpo += `Fecha: ${fecha}\nObra: *${obra}*\n`;
+  if (tasa) cuerpo += `Tasa: ${tasa} Bs./USD\n`;
+  cuerpo += `${sep}\n\n`;
+  if (tabla) cuerpo += `*ITEMS:*\n${tabla}\n`;
+  cuerpo += `${sep}\n`;
+  cuerpo += `Subtotal:  $${subtotalTotal.toFixed(2)}`;
+  if (tasa) cuerpo += ` / Bs. ${totalBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+  cuerpo += `\n`;
+  if (hayIva) {
+    cuerpo += `IVA:       $${ivaTotal.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${ivaBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `\n*TOTAL:    $${totalFinal.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${totalFinalBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `*\n`;
+  } else {
+    cuerpo += `*TOTAL:    $${subtotalTotal.toFixed(2)}`;
+    if (tasa) cuerpo += ` / Bs. ${totalBS.toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+    cuerpo += `*\n`;
+  }
+  cuerpo += `${sep}\n`;
+  if (validez) cuerpo += `Validez: ${validez}\n`;
+  if (entrega) cuerpo += `Entrega: ${entrega}\n`;
+  if (pagos.length) cuerpo += `Pago: ${pagos.join(' / ')}\n`;
+  if (obsP) cuerpo += `\nObs: ${obsP}\n`;
+
   const banco = document.getElementById('prov-banco').value.trim();
   const titular = document.getElementById('prov-titular').value.trim();
   const cuenta = document.getElementById('prov-cuenta').value.trim();
   const tipoCuenta = document.getElementById('prov-tipo-cuenta').value;
   const rif = document.getElementById('prov-rif').value.trim();
   if (banco || cuenta) {
-    cuerpo += `\n─────────────────────────────\nDATOS BANCARIOS:\n`;
+    cuerpo += `\n*DATOS BANCARIOS:*\n`;
     if (banco) cuerpo += `Banco: ${banco}\n`;
     if (titular) cuerpo += `Titular: ${titular}\n`;
-    if (cuenta) cuerpo += `N° de cuenta: ${cuenta}\n`;
-    if (tipoCuenta) cuerpo += `Tipo: ${tipoCuenta}\n`;
-    if (rif) cuerpo += `RIF / Cédula: ${rif}\n`;
+    if (cuenta) cuerpo += `Cuenta: ${cuenta}`;
+    if (tipoCuenta) cuerpo += ` (${tipoCuenta})`;
+    if (cuenta || tipoCuenta) cuerpo += `\n`;
+    if (rif) cuerpo += `RIF/CI: ${rif}\n`;
   }
+
+  // Guardar en BD
+  const itemsGuardar = iParams.map((raw, idx) => {
+    const [desc, cant, unit] = raw.split('|');
+    const precio = parseFloat(document.getElementById('precio-' + idx)?.value || 0);
+    const cantNum = parseFloat(cant || 1);
+    const { aplica, pct } = getIvaFila(idx);
+    const sub = precio * cantNum;
+    const ivaMonto = sub * pct / 100;
+    return {
+      descripcion: desc || '',
+      cantidad: cant || '',
+      unidad: unit || '',
+      alternativa: document.getElementById('alt-' + idx)?.value.trim() || '',
+      precio_usd: precio,
+      aplica_iva: aplica,
+      iva_porcentaje: pct,
+      iva_usd: ivaMonto,
+      subtotal_usd: sub + ivaMonto
+    };
+  });
+
+  fetch('https://cnviejo2-production-46d5.up.railway.app/api/solicitudes-insumos/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      obra, proveedor_nombre: nombre, proveedor_telefono: tel,
+      validez, tiempo_entrega: entrega,
+      condicion_pago: pagos.join(', ') || '',
+      subtotal_usd: subtotalTotal, iva_usd: ivaTotal, total_usd: totalFinal,
+      banco, titular, cuenta, tipo_cuenta: tipoCuenta, rif,
+      observaciones_prov: obsP, items: itemsGuardar
+    })
+  }).catch(() => {});
 
   document.getElementById('btn-email-prov').onclick = () => {
     window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
@@ -380,49 +605,8 @@ function enviarProveedor() {
   document.getElementById('btn-wa-prov').onclick = () => {
     window.open(`https://wa.me/${WHATSAPP_JUNTA}?text=${encodeURIComponent(asunto + '\n\n' + cuerpo)}`, '_blank');
   };
-  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
-  document.getElementById('resumen-total').style.display = 'block';
-  document.getElementById('envio-prov-opts').style.display = 'flex';
 }
 
-function recalcRowManual(idx) {
-  const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-  const tasa = parseFloat(document.getElementById('tasa-'+idx)?.value || 0);
-  const cant = parseFloat(document.getElementById('cant-prov-'+idx)?.value || 1);
-  const precioBS = tasa ? precio * tasa : 0;
-  const subtotal = precio * cant;
-  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
-  document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
-  let total = 0;
-  for (let i = 0; i < 5; i++) {
-    const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);
-    const c = parseFloat(document.getElementById('cant-prov-'+i)?.value || 1);
-    total += p * c;
-  }
-  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
-}
-
-function recalcRow(idx) {
-  const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-  const tasa = parseFloat(document.getElementById('tasa-'+idx)?.value || 0);
-  const params = new URLSearchParams(window.location.search);
-  const iParams = params.getAll('i');
-  const cant = iParams[idx] ? parseFloat(iParams[idx].split('|')[1] || 1) : 1;
-  const precioBS = tasa ? precio * tasa : 0;
-  const subtotal = precio * cant;
-  document.getElementById('bs-'+idx).textContent = tasa ? 'Bs. ' + (precioBS).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
-  document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
-  // recalc grand total
-  let total = 0;
-  iParams.forEach((_, i) => {
-    const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);
-    const c = parseFloat(iParams[i].split('|')[1] || 1);
-    total += p * c;
-  });
-  document.getElementById('total-usd').textContent = '$' + total.toFixed(2);
-}
-
-// Auto-detectar modo por URL
 window.addEventListener('DOMContentLoaded', () => {
   addItem(); addItem(); addItem();
   const params = new URLSearchParams(window.location.search);

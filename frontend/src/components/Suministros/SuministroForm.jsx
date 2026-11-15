@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import API from '../../api';
 import UnidadCombo from './UnidadCombo';
 import ProveedorForm from '../Proveedores/ProveedorForm';
@@ -73,6 +73,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
   const [proveedores, setProveedores] = useState([]);
   const [mostrarProv, setMostrarProv] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [avisoOk, setAvisoOk] = useState('');
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
 
@@ -382,6 +383,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
         </div>
 
         {aviso && <p style={{ color: '#1a7a3c', fontSize: 13, marginBottom: 16 }}>{aviso}</p>}
+        {avisoOk && <div style={{ background:'#e8f6ec', color:'#1a7a3c', border:'1px solid #b6e3c4', borderRadius:8, padding:'9px 14px', marginBottom:10, fontSize:13, fontWeight:500 }}>{avisoOk}</div>}
         {error && <p style={{ color: '#e24b4a', fontSize: 13, marginBottom: 16 }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

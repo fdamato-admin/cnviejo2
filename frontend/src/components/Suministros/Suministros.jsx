@@ -4,6 +4,7 @@ import SuministroForm from './SuministroForm';
 import PedidosSuministros from './PedidosSuministros';
 import ImpactoRecibo from './ImpactoRecibo';
 import CotizacionesInsumos from './CotizacionesInsumos';
+import FacturaCompraForm from './FacturaCompraForm';
 
 const CATEGORIAS = [
   'QuÃ­micos de piscina', 'Equipos de piscina', 'JardinerÃ­a y Ã¡reas verdes',

@@ -134,3 +134,104 @@ def frecuencias_compra(db: Session = Depends(get_db)):
             "compras": len(fechas),
         })
     return salida
+
+
+# â”€â”€ Factura multi-item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class _ItemFacturaIn(BaseModel):
+    nombre: str
+    categoria: str
+    unidad: Optional[str] = ""
+    cantidad: float = 1
+    precio_unitario: float = 0
+    aplica_iva: bool = True
+    iva_porcentaje: float = 16.0
+    moneda_pago: str = "Dolares"
+    tasa_cambio: float = 0
+
+class _FacturaIn(BaseModel):
+    fecha_compra: str
+    tipo_documento: str
+    documento_otro: Optional[str] = ""
+    proveedor: Optional[str] = ""
+    estado_recepcion: Optional[str] = "Recibido"
+    notas: Optional[str] = ""
+    items: List[_ItemFacturaIn] = []
+
+@router.post("/factura", status_code=201)
+def ingresar_factura(data: _FacturaIn, db: Session = Depends(get_db)):
+    import math
+    def rnd(n): return math.floor(n * 100 + 0.5) / 100
+
+    try:
+        from datetime import date as _d
+        fecha = _d.fromisoformat(data.fecha_compra)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Fecha invalida")
+
+    resultado = []
+    for it in data.items:
+        precio = it.precio_unitario or 0
+        qty = it.cantidad or 1
+        iva_pct = it.iva_porcentaje if it.aplica_iva else 0
+        sub = rnd(precio * qty)
+        iva_monto = rnd(sub * iva_pct / 100)
+        total = rnd(sub + iva_monto)
+        esBs = (it.moneda_pago == "Bs")
+
+        existente = db.query(Suministro).filter(
+            Suministro.nombre.ilike(it.nombre.strip())
+        ).first()
+
+        campos = dict(
+            nombre=it.nombre.strip().upper(),
+            categoria=it.categoria,
+            unidad=it.unidad or None,
+            proveedor=(data.proveedor or "").strip().upper() or None,
+            ultima_fecha_compra=fecha,
+            cantidad=qty,
+            ultimo_precio=precio,
+            moneda_pago=it.moneda_pago,
+            tipo_documento=data.tipo_documento,
+            documento_otro=data.documento_otro or None,
+            estado_recepcion=data.estado_recepcion or "Recibido",
+            notas=data.notas or None,
+            iva_porcentaje=iva_pct if it.aplica_iva else None,
+        )
+        if esBs:
+            tasa = it.tasa_cambio or 0
+            precio_bs = rnd(precio * tasa) if tasa else precio
+            sub_bs = rnd(precio_bs * qty)
+            iva_bs = rnd(sub_bs * iva_pct / 100)
+            total_bs = rnd(sub_bs + iva_bs)
+            campos.update(
+                tasa_cambio=tasa or None,
+                precio_bs=precio_bs,
+                iva_bs=iva_bs,
+                monto_total_bs=total_bs,
+                iva_divisa=None,
+                monto_total_divisa=None,
+            )
+        else:
+            campos.update(
+                tasa_cambio=None,
+                precio_bs=None,
+                iva_bs=None,
+                monto_total_bs=None,
+                iva_divisa=iva_monto,
+                monto_total_divisa=total,
+            )
+
+        if existente:
+            for k, v in campos.items():
+                setattr(existente, k, v)
+            s = existente
+        else:
+            s = Suministro(**campos)
+            db.add(s)
+
+        db.flush()
+        _registrar_compra(db, s)
+        resultado.append({"nombre": s.nombre, "id": s.id})
+
+    db.commit()
+    return {"ok": True, "registros": len(resultado), "items": resultado}
