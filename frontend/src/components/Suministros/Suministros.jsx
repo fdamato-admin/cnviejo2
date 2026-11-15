@@ -74,6 +74,19 @@ export default function Suministros() {
       {vista === 'impacto' && <ImpactoRecibo />}
       {vista === 'cotizaciones' && <CotizacionesInsumos />}
     </div>
+
+      {avisoGuardado && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#1a7a3c', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+          {avisoGuardado}
+        </div>
+      )}
+
+      {modalFactura && (
+        <FacturaCompraForm
+          onClose={() => setModalFactura(false)}
+          onGuardado={(msg) => { setAvisoGuardado(msg); setTimeout(() => setAvisoGuardado(''), 4000); cargarDatos(); }}
+        />
+      )}
   );
 }
 
@@ -83,6 +96,8 @@ function Compras({ pedido, onPedidoUsado }) {
   const [buscar, setBuscar] = useState('');
   const [categoria, setCategoria] = useState('');
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalFactura, setModalFactura] = useState(false);
+  const [avisoGuardado, setAvisoGuardado] = useState('');
   const [seleccionado, setSeleccionado] = useState(null);
   const [confirmEliminar, setConfirmEliminar] = useState(null);
 
@@ -166,10 +181,16 @@ function Compras({ pedido, onPedidoUsado }) {
             {suministros.length} suministro{suministros.length !== 1 ? 's' : ''} registrado{suministros.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button onClick={abrirNuevo}
-          style={{ padding: '10px 20px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-          + Ingresar compra
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={abrirNuevo}
+            style={{ padding: '10px 20px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+            + Ingresar compra
+          </button>
+          <button onClick={() => setModalFactura(true)}
+            style={{ padding: '10px 20px', background: '#1a7a3c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+            + Factura / Nota de entrega
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -308,5 +329,18 @@ function Compras({ pedido, onPedidoUsado }) {
         </div>
       )}
     </div>
+
+      {avisoGuardado && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#1a7a3c', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+          {avisoGuardado}
+        </div>
+      )}
+
+      {modalFactura && (
+        <FacturaCompraForm
+          onClose={() => setModalFactura(false)}
+          onGuardado={(msg) => { setAvisoGuardado(msg); setTimeout(() => setAvisoGuardado(''), 4000); cargarDatos(); }}
+        />
+      )}
   );
 }
