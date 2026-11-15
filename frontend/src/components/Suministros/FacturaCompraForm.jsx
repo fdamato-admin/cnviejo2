@@ -19,6 +19,7 @@ function calcItem(it) {
 export default function FacturaCompraForm({ onClose, onGuardado }) {
   const [ivaD, setIvaD] = useState(16);
   const [proveedores, setProveedores] = useState([]);
+  const [suministrosLista, setSuministrosLista] = useState([]);
   const [form, setForm] = useState({
     fecha_compra: new Date().toISOString().slice(0,10),
     tipo_documento:'Factura', documento_otro:'', proveedor:'',
@@ -36,6 +37,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
       }
     }).catch(()=>{});
     API.get('/proveedores/').then(r => setProveedores(r.data || [])).catch(()=>{});
+    API.get('/suministros/').then(r => setSuministrosLista(r.data || [])).catch(()=>{});
   }, []);
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -135,7 +137,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                 return (
                   <tr key={i} style={{ background:i%2===0?'#fff':'#f8fafc', borderBottom:'1px solid #eee' }}>
                     <td style={tdS}>{i+1}</td>
-                    <td style={tdS}><input value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo"/></td>
+                    <td style={tdS}><input list="sl" value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo"/><datalist id="sl">{suministrosLista.map(s=><option key={s.id} value={s.nombre}/>)}</datalist></td>
                     <td style={tdS}><select value={it.categoria} onChange={e=>setItem(i,'categoria',e.target.value)} style={iS}><option value="">Seleccionar...</option>{CATEGORIAS.map(cat=><option key={cat}>{cat}</option>)}</select></td>
                     <td style={tdS}><input value={it.unidad} onChange={e=>setItem(i,'unidad',e.target.value.toUpperCase())} style={iS} placeholder="UND"/></td>
                     <td style={tdS}><input type="number" min="0" step="0.01" value={it.cantidad} onChange={e=>setItem(i,'cantidad',e.target.value)} style={iS}/></td>
