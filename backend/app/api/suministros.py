@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+﻿from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
+from pydantic import BaseModel
 from ..database import get_db
 from ..models import Suministro, Configuracion, CompraSuministro
 from ..schemas import SuministroCreate, SuministroUpdate, SuministroOut
