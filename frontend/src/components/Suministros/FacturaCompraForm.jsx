@@ -108,9 +108,9 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
         <button onClick={()=>setItems(arr=>[...arr,iV(ivaD)])} style={{ padding:'6px 15px', border:'1px dashed #2a78d6', borderRadius:8, background:'#f0f6ff', color:'#2a78d6', fontSize:13, cursor:'pointer', marginBottom:14 }}>+ Agregar articulo</button>
         <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
           <div style={{ background:'#1a3a5c', color:'#fff', borderRadius:10, padding:'12px 20px', textAlign:'right', minWidth:195 }}>
-            <div style={{fontSize:12,opacity:0.8}}>Subtotal</div><div style={{fontSize:16,fontWeight:600}}>\</div>
-            <div style={{fontSize:12,opacity:0.7,marginTop:4}}>IVA</div><div style={{fontSize:14,fontWeight:500}}>\</div>
-            <div style={{fontSize:12,opacity:0.7,marginTop:4}}>TOTAL</div><div style={{fontSize:20,fontWeight:700}}>\</div>
+            <div style={{fontSize:12,opacity:0.8}}>Subtotal</div><div style={{fontSize:16,fontWeight:600}}>{tots.sub.toFixed(2)}</div>
+            <div style={{fontSize:12,opacity:0.7,marginTop:4}}>IVA</div><div style={{fontSize:14,fontWeight:500}}>{tots.iva.toFixed(2)}</div>
+            <div style={{fontSize:12,opacity:0.7,marginTop:4}}>TOTAL</div><div style={{fontSize:20,fontWeight:700}}>{tots.total.toFixed(2)}</div>
           </div>
         </div>
         {error && <p style={{color:'#e24b4a',fontSize:13,marginBottom:10}}>{error}</p>}
