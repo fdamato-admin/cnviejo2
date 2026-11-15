@@ -8,6 +8,7 @@ from datetime import datetime
 from ..database import get_db, Base
 from ..auth import get_current_user, require_permiso
 from ..models import Usuario, NivelPermiso
+from .auditoria import registrar
 
 class MovimientoCaja(Base):
     __tablename__ = "caja_chica"
@@ -115,6 +116,7 @@ def registrar_movimiento(data: MovimientoIn, db: Session = Depends(get_db), usua
         creado_por=usuario.nombre if usuario else "Sistema",
     )
     db.add(mov)
+    registrar(db, usuario, "crear", "caja", mov.id, f"{mov.tipo} - USD: {mov.monto_usd}")
     db.commit()
     db.refresh(mov)
     return {
@@ -126,7 +128,7 @@ def registrar_movimiento(data: MovimientoIn, db: Session = Depends(get_db), usua
     }
 
 @router.delete("/{mov_id}", status_code=204)
-def eliminar_movimiento(mov_id: int, db: Session = Depends(get_db), _=Depends(require_permiso("*", NivelPermiso.admin))):
+def eliminar_movimiento(mov_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user), _=Depends(require_permiso("*", NivelPermiso.admin))):
     mov = db.query(MovimientoCaja).filter(MovimientoCaja.id == mov_id).first()
     if not mov: raise HTTPException(404, "Movimiento no encontrado")
     posteriores = db.query(MovimientoCaja).filter(MovimientoCaja.id > mov_id).order_by(MovimientoCaja.id).all()
@@ -140,4 +142,5 @@ def eliminar_movimiento(mov_id: int, db: Session = Depends(get_db), _=Depends(re
         elif p.tipo in ("gasto_usd", "venta_usd"):
             saldo_base = saldo_base - (p.monto_usd or 0)
         p.saldo_usd = round(saldo_base, 2)
+    registrar(db, usuario, "eliminar", "caja", mov_id, f"Movimiento id {mov_id}")
     db.commit()

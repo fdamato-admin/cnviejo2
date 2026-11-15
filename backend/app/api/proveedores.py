@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from ..database import get_db
-from ..models import Proveedor, TipoProveedor, EstadoProveedor
+from ..models import Proveedor, TipoProveedor, EstadoProveedor, Usuario
+from ..auth import get_current_user
+from .auditoria import registrar
 from ..schemas import ProveedorCreate, ProveedorUpdate, ProveedorOut
 
 router = APIRouter(prefix="/proveedores", tags=["Proveedores"])
@@ -44,28 +46,33 @@ def obtener_proveedor(id: int, db: Session = Depends(get_db)):
     return p
 
 @router.post("/", response_model=ProveedorOut, status_code=201)
-def crear_proveedor(data: ProveedorCreate, db: Session = Depends(get_db)):
+def crear_proveedor(data: ProveedorCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     p = Proveedor(**data.model_dump())
     db.add(p)
+    db.flush()
+    registrar(db, usuario, "crear", "proveedor", p.id, f"Nombre: {p.nombre}")
     db.commit()
     db.refresh(p)
     return p
 
 @router.put("/{id}", response_model=ProveedorOut)
-def actualizar_proveedor(id: int, data: ProveedorUpdate, db: Session = Depends(get_db)):
+def actualizar_proveedor(id: int, data: ProveedorUpdate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     p = db.query(Proveedor).filter(Proveedor.id == id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(p, k, v)
+    registrar(db, usuario, "editar", "proveedor", p.id, f"Nombre: {p.nombre}")
     db.commit()
     db.refresh(p)
     return p
 
 @router.delete("/{id}", status_code=204)
-def eliminar_proveedor(id: int, db: Session = Depends(get_db)):
+def eliminar_proveedor(id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     p = db.query(Proveedor).filter(Proveedor.id == id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
+    nombre = p.nombre
     db.delete(p)
+    registrar(db, usuario, "eliminar", "proveedor", id, f"Nombre: {nombre}")
     db.commit()

@@ -4,8 +4,10 @@ from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Suministro, Configuracion, CompraSuministro
+from ..models import Suministro, Configuracion, CompraSuministro, Usuario
 from ..schemas import SuministroCreate, SuministroUpdate, SuministroOut
+from ..auth import get_current_user
+from .auditoria import registrar
 
 router = APIRouter(prefix="/suministros", tags=["Suministros"])
 
@@ -60,17 +62,18 @@ def obtener_suministro(id: int, db: Session = Depends(get_db)):
     return s
 
 @router.post("/", response_model=SuministroOut, status_code=201)
-def crear_suministro(data: SuministroCreate, db: Session = Depends(get_db)):
+def crear_suministro(data: SuministroCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     s = Suministro(**data.model_dump())
     db.add(s)
     db.flush()
     _registrar_compra(db, s)
+    registrar(db, usuario, "crear", "suministro", s.id, f"Nombre: {s.nombre}")
     db.commit()
     db.refresh(s)
     return s
 
 @router.put("/{id}", response_model=SuministroOut)
-def actualizar_suministro(id: int, data: SuministroUpdate, db: Session = Depends(get_db)):
+def actualizar_suministro(id: int, data: SuministroUpdate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     s = db.query(Suministro).filter(Suministro.id == id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Suministro no encontrado")
@@ -79,16 +82,19 @@ def actualizar_suministro(id: int, data: SuministroUpdate, db: Session = Depends
     db.flush()
     if "ultima_fecha_compra" in data.model_fields_set:
         _registrar_compra(db, s)
+    registrar(db, usuario, "editar", "suministro", s.id, f"Nombre: {s.nombre}")
     db.commit()
     db.refresh(s)
     return s
 
 @router.delete("/{id}", status_code=204)
-def eliminar_suministro(id: int, db: Session = Depends(get_db)):
+def eliminar_suministro(id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     s = db.query(Suministro).filter(Suministro.id == id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Suministro no encontrado")
+    nombre = s.nombre
     db.delete(s)
+    registrar(db, usuario, "eliminar", "suministro", id, f"Nombre: {nombre}")
     db.commit()
 
 
@@ -160,7 +166,7 @@ class _FacturaIn(BaseModel):
     items: List[_ItemFacturaIn] = []
 
 @router.post("/factura", status_code=201)
-def ingresar_factura(data: _FacturaIn, db: Session = Depends(get_db)):
+def ingresar_factura(data: _FacturaIn, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     import math
     def rnd(n): return math.floor(n * 100 + 0.5) / 100
 
@@ -236,5 +242,6 @@ def ingresar_factura(data: _FacturaIn, db: Session = Depends(get_db)):
         _registrar_compra(db, s)
         resultado.append({"nombre": s.nombre, "id": s.id})
 
+    registrar(db, usuario, "factura", "suministro", None, f"{len(resultado)} items - Proveedor: {data.proveedor or chr(45)}")
     db.commit()
     return {"ok": True, "registros": len(resultado), "items": resultado}
