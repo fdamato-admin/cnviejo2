@@ -34,7 +34,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
     if (!form.fecha_compra) { setError('La fecha es obligatoria'); return; }
     if (!form.tipo_documento) { setError('Tipo de documento requerido'); return; }
     if (form.tipo_documento==='Otro' && !form.documento_otro.trim()) { setError('Especifica el tipo de documento'); return; }
-    for (let i=0;i<items.length;i++) { if (!items[i].nombre.trim()) { setError(Item : nombre obligatorio); return; } if (!items[i].categoria) { setError(Item : categoria obligatoria); return; } }
+    for (let i=0;i<items.length;i++) { if (!items[i].nombre.trim()) { setError(`Item ${i+1}: nombre obligatorio`); return; } if (!items[i].categoria) { setError(`Item ${i+1}: categoria obligatoria`); return; } }
     setGuardando(true); setError('');
     try {
       const payload = { ...form, items: items.map(it=>({...it, nombre:it.nombre.trim().toUpperCase(), cantidad:parseFloat(it.cantidad)||1, precio_unitario:parseFloat(it.precio_unitario)||0, iva_porcentaje:parseFloat(it.iva_porcentaje)||0, tasa_cambio:parseFloat(it.tasa_cambio)||0, aplica_iva:!!it.aplica_iva })) };
