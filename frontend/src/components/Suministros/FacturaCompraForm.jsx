@@ -126,13 +126,13 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                 <th style={{...thS,minWidth:65}}>Unidad</th>
                 <th style={{...thS,width:62}}>Cant.</th>
                 <th style={{...thS,width:82}}>Moneda</th>
-                <th style={{...thS,width:92}}>Precio unit.</th>
+                <th style={{...thS,width:115}}>Precio unit.</th>
                 <th style={{...thS,width:68}}>Tasa Bs</th>
                 <th style={{...thS,width:42,textAlign:'center'}}>IVA</th>
                 <th style={{...thS,width:56}}>%IVA</th>
-                <th style={{...thS,width:82,background:'#1a5c3a'}}>Subtotal</th>
+                <th style={{...thS,width:100,background:'#1a5c3a'}}>Subtotal</th>
                 <th style={{...thS,width:75,background:'#1a5c3a'}}>IVA $</th>
-                <th style={{...thS,width:85,background:'#0d3d26'}}>Total</th>
+                <th style={{...thS,width:100,background:'#0d3d26'}}>Total</th>
                 <th style={{...thS,width:30}}></th>
               </tr>
             </thead>
