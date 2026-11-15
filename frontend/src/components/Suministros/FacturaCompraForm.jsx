@@ -4,6 +4,7 @@ import API from '../../api';
 const CATEGORIAS = ['Quimicos de piscina','Equipos de piscina','Jardineria y areas verdes','Electricidad','Plomeria / Fontaneria','Planta electrica','Seguridad / Vigilancia','Pintura e impermeabilizacion','Ferreteria y materiales','Limpieza','Aire acondicionado','Informatica y tecnologia','Otro'];
 const DOCUMENTOS = ['Nota de Entrega','Factura','Otro'];
 const MONEDAS = ['Dolares','Bs','Euros','USDT'];
+const UNIDADES = ['UND','KG','LT','MT','M2','M3','GLN','CAJA','BOLSA','ROLLO','PAR','JGO','SRV','HRS'];
 
 function iV(pct) {
   return { nombre:'', categoria:'', unidad:'', cantidad:'1', precio_unitario:'', aplica_iva:true, iva_porcentaje:String(pct||16), moneda_pago:'Dolares', tasa_cambio:'' };
@@ -140,7 +141,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                     <td style={tdS}>{i+1}</td>
                     <td style={tdS}><input list="sl" value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo"/><datalist id="sl">{suministrosLista.map(s=><option key={s.id} value={s.nombre}/>)}</datalist></td>
                     <td style={tdS}><select value={it.categoria} onChange={e=>setItem(i,'categoria',e.target.value)} style={iS}><option value="">Seleccionar...</option>{CATEGORIAS.map(cat=><option key={cat}>{cat}</option>)}</select></td>
-                    <td style={tdS}><input value={it.unidad} onChange={e=>setItem(i,'unidad',e.target.value.toUpperCase())} style={iS} placeholder="UND"/></td>
+                    <td style={tdS}><input list="ul" value={it.unidad} onChange={e=>setItem(i,'unidad',e.target.value.toUpperCase())} style={{...iS,width:70}} placeholder="UND"/><datalist id="ul">{UNIDADES.map(u=><option key={u} value={u}/>)}</datalist></td>
                     <td style={tdS}><input type="number" min="0" step="0.01" value={it.cantidad} onChange={e=>setItem(i,'cantidad',e.target.value)} style={iS}/></td>
                     <td style={tdS}><select value={it.moneda_pago} onChange={e=>setItem(i,'moneda_pago',e.target.value)} style={iS}>{MONEDAS.map(m=><option key={m}>{m}</option>)}</select></td>
                     <td style={tdS}><input type="number" min="0" step="0.01" value={it.precio_unitario} onChange={e=>setItem(i,'precio_unitario',e.target.value)} style={iS} placeholder="0.00"/></td>
