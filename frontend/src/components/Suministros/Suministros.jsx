@@ -73,18 +73,6 @@ export default function Suministros() {
       {vista === 'pedidos' && <PedidosSuministros onComprar={comprarPedido} />}
       {vista === 'impacto' && <ImpactoRecibo />}
       {vista === 'cotizaciones' && <CotizacionesInsumos />}
-      {avisoGuardado && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#1a7a3c', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
-          {avisoGuardado}
-        </div>
-      )}
-
-      {modalFactura && (
-        <FacturaCompraForm
-          onClose={() => setModalFactura(false)}
-          onGuardado={(msg) => { setAvisoGuardado(msg); setTimeout(() => setAvisoGuardado(''), 4000); cargarDatos(); }}
-        />
-      )}
     </div>
   );
 }
@@ -327,6 +315,7 @@ function Compras({ pedido, onPedidoUsado }) {
           </div>
         </div>
       )}
+
       {avisoGuardado && (
         <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#1a7a3c', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 2000, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
           {avisoGuardado}
@@ -336,7 +325,7 @@ function Compras({ pedido, onPedidoUsado }) {
       {modalFactura && (
         <FacturaCompraForm
           onClose={() => setModalFactura(false)}
-          onGuardado={(msg) => { setAvisoGuardado(msg); setTimeout(() => setAvisoGuardado(''), 4000); cargarDatos(); }}
+          onGuardado={(msg) => { setAvisoGuardado(msg); setTimeout(() => setAvisoGuardado(''), 4000); cargar(); }}
         />
       )}
     </div>
