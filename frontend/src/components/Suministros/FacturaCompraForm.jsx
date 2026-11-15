@@ -112,6 +112,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
           <div style={{marginBottom:10}}><label style={lS}>N Documento</label><input value={form.numero_documento} onChange={e=>setF('numero_documento',e.target.value)} style={iS} placeholder="Ej: 00123"/></div>
           <div style={{marginBottom:10}}><label style={lS}>Proveedor</label><select value={form.proveedor} onChange={e=>setF('proveedor',e.target.value)} style={iS}><option value="">-- Seleccionar --</option>{proveedores.map(p=><option key={p.id} value={p.nombre}>{p.nombre}</option>)}</select></div>
           <div style={{marginBottom:10}}><label style={lS}>Estado</label><select value={form.estado_recepcion} onChange={e=>setF('estado_recepcion',e.target.value)} style={iS}><option>Por recibir</option><option>Recibido</option></select></div>
+          {hayMonedaBs && (<div style={{marginBottom:10,background:'#fffbe6',borderRadius:8,padding:'8px 10px',border:'1px solid #ffe58f'}}><label style={{...lS,color:'#b45309'}}>Tasa Bs (global) *</label><input type="number" min="0" step="0.01" value={tasaGlobal} onChange={e=>setTasaGlobal(e.target.value)} style={{...iS,fontWeight:600}} placeholder="Bs por $1"/><span style={{fontSize:11,color:'#92400e'}}> Aplica a todos los items en Bs</span></div>)}
           <div style={{marginBottom:10, gridColumn:'1 / -1'}}><label style={lS}>Notas</label><input value={form.notas} onChange={e=>setF('notas',e.target.value)} style={iS} placeholder="Observaciones (opcional)"/></div>
         </div>
 
