@@ -218,7 +218,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   { t: 'Pagado en' },
                   { t: 'Precio unit.' },
                   { t: 'Total' },
-                  { t: 'N° Documento' },
+                  { t: 'N Documento' },
                   { t: 'Documento' },
                   { t: 'RecepciÃ³n' },
                   { t: '' },
@@ -252,7 +252,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: formatTotal(s) !== 'â€”' ? '#1a7a3c' : '#aaa', whiteSpace: 'nowrap' }}>
                     {formatTotal(s)}
                   </td>
-                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.numero_documento || '–'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{s.numero_documento || '-'}</td>
                   <td style={{ padding: '10px 14px', color: '#666', whiteSpace: 'nowrap' }}>{formatDocumento(s)}</td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     {s.estado_recepcion ? (
