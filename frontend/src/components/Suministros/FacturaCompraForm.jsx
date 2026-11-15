@@ -7,7 +7,7 @@ const MONEDAS = ['Dolares','Bs','Euros','USDT'];
 const UNIDADES = ['UND','KG','LT','MT','M2','M3','GLN','CAJA','BOLSA','ROLLO','PAR','JGO','SRV','HRS'];
 
 function iV(pct) {
-  return { nombre:'', categoria:'', unidad:'', cantidad:'1', precio_unitario:'', aplica_iva:true, iva_porcentaje:String(pct||16), moneda_pago:'Dolares', tasa_cambio:'' };
+  return { nombre:'', categoria:'', unidad:'', cantidad:'1', precio_unitario:'', aplica_iva:true, iva_porcentaje:String(pct||16), moneda_pago:'Dolares' };
 }
 
 function calcItem(it) {
@@ -27,6 +27,8 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
     estado_recepcion:'Recibido', notas:''
   });
   const [items, setItems] = useState([iV(16)]);
+  const [tasaGlobal, setTasaGlobal] = useState('');
+  const hayMonedaBs = items.some(it => it.moneda_pago === 'Bs');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -142,10 +144,10 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                     <td style={tdS}><input list="sl" value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo"/><datalist id="sl">{suministrosLista.map(s=><option key={s.id} value={s.nombre}/>)}</datalist></td>
                     <td style={tdS}><select value={it.categoria} onChange={e=>setItem(i,'categoria',e.target.value)} style={iS}><option value="">Seleccionar...</option>{CATEGORIAS.map(cat=><option key={cat}>{cat}</option>)}</select></td>
                     <td style={tdS}><input list="ul" value={it.unidad} onChange={e=>setItem(i,'unidad',e.target.value.toUpperCase())} style={{...iS,width:70}} placeholder="UND"/><datalist id="ul">{UNIDADES.map(u=><option key={u} value={u}/>)}</datalist></td>
-                    <td style={tdS}><input type="number" min="0" step="0.01" value={it.cantidad} onChange={e=>setItem(i,'cantidad',e.target.value)} style={iS}/></td>
+                    <td style={tdS}><input type="number" min="0" step="0.01" value={it.cantidad} onChange={e=>setItem(i,'cantidad',e.target.value)} style={{...iS,minWidth:80}}/></td>
                     <td style={tdS}><select value={it.moneda_pago} onChange={e=>setItem(i,'moneda_pago',e.target.value)} style={iS}>{MONEDAS.map(m=><option key={m}>{m}</option>)}</select></td>
                     <td style={tdS}><input type="number" min="0" step="0.01" value={it.precio_unitario} onChange={e=>setItem(i,'precio_unitario',e.target.value)} style={iS} placeholder="0.00"/></td>
-                    <td style={tdS}>{it.moneda_pago==='Bs'?<input type="number" min="0" step="0.01" value={it.tasa_cambio} onChange={e=>setItem(i,'tasa_cambio',e.target.value)} style={iS} placeholder="Tasa"/>:<span style={{color:'#aaa',fontSize:12}}>N/A</span>}</td>
+                    <td style={tdS}><span style={{color:'#aaa',fontSize:12}}>{it.moneda_pago==='Bs'?(tasaGlobal||'?'):'-'}</span></td>
                     <td style={{...tdS,textAlign:'center'}}><input type="checkbox" checked={it.aplica_iva} onChange={e=>setItem(i,'aplica_iva',e.target.checked)} style={{width:16,height:16,cursor:'pointer'}}/></td>
                     <td style={tdS}><input type="number" min="0" max="100" step="0.01" value={it.iva_porcentaje} onChange={e=>setItem(i,'iva_porcentaje',e.target.value)} disabled={!it.aplica_iva} style={{...iS,background:it.aplica_iva?'#fff':'#f5f7fa',width:52}}/></td>
                     <td style={{...tdS,fontWeight:600,color:'#1a3a5c',textAlign:'right'}}>{c.sub}</td>
