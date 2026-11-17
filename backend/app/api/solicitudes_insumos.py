@@ -184,7 +184,8 @@ def comparar_solicitud_get(nro_solicitud: str, db: Session = Depends(get_db)):
     items_por_desc = defaultdict(list)
     for s in solicitudes:
         for it in s.items:
-            desc = (it.alternativa or it.descripcion or '').strip().upper()
+            # Agrupar por descripción ORIGINAL del pedido (no por alternativa)
+            desc = (it.descripcion or '').strip().upper()
             items_por_desc[desc].append({
                 "solicitud_id": s.id,
                 "proveedor": s.proveedor_nombre,
@@ -200,8 +201,9 @@ def comparar_solicitud_get(nro_solicitud: str, db: Session = Depends(get_db)):
     for desc, ofertas in items_por_desc.items():
         precios_validos = [o for o in ofertas if o["precio_usd"] is not None]
         min_precio = min((o["precio_usd"] for o in precios_validos), default=None)
+        hay_competencia = len(precios_validos) >= 2
         for o in ofertas:
-            o["es_mejor_precio"] = (o["precio_usd"] == min_precio) if min_precio is not None else False
+            o["es_mejor_precio"] = hay_competencia and (o["precio_usd"] == min_precio) if min_precio is not None else False
         resultado.append({
             "descripcion": desc,
             "ofertas": sorted(ofertas, key=lambda x: (x["precio_usd"] or 9999999))
