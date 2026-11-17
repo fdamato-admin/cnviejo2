@@ -25,6 +25,7 @@ class ItemIn(BaseModel):
 
 class SolicitudInsumoIn(BaseModel):
     obra: str
+    nro_solicitud: Optional[str] = None
     fecha_requerida: Optional[str] = None
     observaciones: Optional[str] = None
     proveedor_nombre: Optional[str] = None
@@ -51,6 +52,7 @@ class ItemOut(ItemIn):
 class SolicitudInsumoOut(BaseModel):
     id: int
     obra: str
+    nro_solicitud: Optional[str] = None
     proveedor_nombre: Optional[str]
     proveedor_telefono: Optional[str]
     condicion_pago: Optional[str]
@@ -90,8 +92,26 @@ def crear_solicitud(data: SolicitudInsumoIn, db: Session = Depends(get_db)):
         if prov:
             proveedor_id = prov.id
 
+    # Generar nro_solicitud si no viene en el payload
+    nro_solicitud = data.nro_solicitud
+    if not nro_solicitud:
+        # Buscar el último número usado y sumar 1
+        ultima = db.query(SolicitudInsumos.nro_solicitud)\
+            .filter(SolicitudInsumos.nro_solicitud.isnot(None))\
+            .order_by(SolicitudInsumos.nro_solicitud.desc())\
+            .first()
+        if ultima and ultima[0]:
+            try:
+                siguiente = int(ultima[0]) + 1
+            except ValueError:
+                siguiente = 1
+        else:
+            siguiente = 1
+        nro_solicitud = str(siguiente).zfill(6)
+
     s = SolicitudInsumos(
         obra=data.obra,
+        nro_solicitud=nro_solicitud,
         fecha_requerida=data.fecha_requerida,
         observaciones=data.observaciones,
         proveedor_id=proveedor_id,
@@ -131,9 +151,67 @@ def crear_solicitud(data: SolicitudInsumoIn, db: Session = Depends(get_db)):
     db.refresh(s)
     return s
 
+@router.get("/nuevo-nro")
+def nuevo_nro_solicitud(db: Session = Depends(get_db)):
+    """Genera y reserva el próximo número de solicitud (sin crear registro)."""
+    ultima = db.query(SolicitudInsumos.nro_solicitud)\
+        .filter(SolicitudInsumos.nro_solicitud.isnot(None))\
+        .order_by(SolicitudInsumos.nro_solicitud.desc())\
+        .first()
+    if ultima and ultima[0]:
+        try:
+            siguiente = int(ultima[0]) + 1
+        except ValueError:
+            siguiente = 1
+    else:
+        siguiente = 1
+    return {"nro_solicitud": str(siguiente).zfill(6)}
+
 @router.get("/", response_model=List[SolicitudInsumoOut])
 def listar_solicitudes(db: Session = Depends(get_db)):
     return db.query(SolicitudInsumos).order_by(SolicitudInsumos.creado_en.desc()).all()
+
+@router.get("/comparar/{nro_solicitud}")
+def comparar_solicitud_get(nro_solicitud: str, db: Session = Depends(get_db)):
+    """Compara precios de proveedores para un mismo nro_solicitud."""
+    from collections import defaultdict
+    solicitudes = db.query(SolicitudInsumos)\
+        .filter(SolicitudInsumos.nro_solicitud == nro_solicitud)\
+        .all()
+    if not solicitudes:
+        raise HTTPException(404, "No hay cotizaciones para ese número de solicitud")
+
+    items_por_desc = defaultdict(list)
+    for s in solicitudes:
+        for it in s.items:
+            desc = (it.alternativa or it.descripcion or '').strip().upper()
+            items_por_desc[desc].append({
+                "solicitud_id": s.id,
+                "proveedor": s.proveedor_nombre,
+                "descripcion": it.descripcion,
+                "alternativa": it.alternativa,
+                "cantidad": it.cantidad,
+                "unidad": it.unidad,
+                "precio_usd": float(it.precio_usd) if it.precio_usd else None,
+                "subtotal_usd": float(it.subtotal_usd) if it.subtotal_usd else None,
+            })
+
+    resultado = []
+    for desc, ofertas in items_por_desc.items():
+        precios_validos = [o for o in ofertas if o["precio_usd"] is not None]
+        min_precio = min((o["precio_usd"] for o in precios_validos), default=None)
+        for o in ofertas:
+            o["es_mejor_precio"] = (o["precio_usd"] == min_precio) if min_precio is not None else False
+        resultado.append({
+            "descripcion": desc,
+            "ofertas": sorted(ofertas, key=lambda x: (x["precio_usd"] or 9999999))
+        })
+
+    return {
+        "nro_solicitud": nro_solicitud,
+        "proveedores": [s.proveedor_nombre for s in solicitudes],
+        "items": resultado
+    }
 
 @router.get("/{id}", response_model=SolicitudInsumoOut)
 def obtener_solicitud(id: int, db: Session = Depends(get_db)):

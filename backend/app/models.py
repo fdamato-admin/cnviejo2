@@ -222,6 +222,8 @@ class SolicitudInsumos(Base):
     tipo_cuenta = Column(String(20), nullable=True)
     rif = Column(String(30), nullable=True)
     observaciones_prov = Column(Text, nullable=True)
+    # Número de solicitud para agrupar cotizaciones del mismo pedido
+    nro_solicitud = Column(String(10), nullable=True, index=True)
     # Estado
     estado = Column(Enum(EstadoSolicitudInsumos), default=EstadoSolicitudInsumos.pendiente)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())

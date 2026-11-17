@@ -250,7 +250,9 @@ function buildSolicitudData() {
   });
 
   const paramsItems = items.map(it => `i=${encodeURIComponent(it.desc+'|'+it.cant+'|'+it.unit)}`).join('&');
-  const urlProv = window.location.href.split('?')[0] + '?modo=proveedor&obra=' + encodeURIComponent(obra) + '&' + paramsItems;
+  // nro_solicitud se obtiene del backend (o se reutiliza si ya se generó)
+  const nroSol = window._nroSolicitud || '';
+  const urlProv = window.location.href.split('?')[0] + '?modo=proveedor&obra=' + encodeURIComponent(obra) + (nroSol ? '&ref=' + encodeURIComponent(nroSol) : '') + '&' + paramsItems;
 
   let cuerpo = `SOLICITUD DE MATERIALES\n`;
   cuerpo += `Fecha: ${fecha}\n`;
@@ -266,7 +268,24 @@ function buildSolicitudData() {
   return { obra, fecha, cuerpo, urlProv };
 }
 
-function generarEnlace() {
+async function generarEnlace() {
+  const obra = document.getElementById('obra').value.trim();
+  const items = getItems();
+  if (!obra) { alert('Indique el trabajo / obra.'); return; }
+  if (items.length === 0) { alert('Agregue al menos un ítem.'); return; }
+
+  // Si ya tenemos un nro_solicitud para esta sesión, reutilizarlo
+  if (!window._nroSolicitud) {
+    try {
+      const r = await fetch('https://cnviejo2-production-46d5.up.railway.app/api/solicitudes-insumos/nuevo-nro');
+      const j = await r.json();
+      window._nroSolicitud = j.nro_solicitud;
+    } catch(e) {
+      // fallback si no hay conexión
+      window._nroSolicitud = Date.now().toString().slice(-6).padStart(6,'0');
+    }
+  }
+
   const data = buildSolicitudData();
   if (!data) return;
   _enlaceGenerado = data.urlProv;
@@ -524,11 +543,15 @@ function enviarProveedor() {
     };
   });
 
+  // Leer nro_solicitud del parámetro ?ref= de la URL
+  const nroSolicitudURL = new URLSearchParams(window.location.search).get('ref') || null;
+
   fetch('https://cnviejo2-production-46d5.up.railway.app/api/solicitudes-insumos/', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       obra, proveedor_nombre: nombre, proveedor_telefono: tel,
+      nro_solicitud: nroSolicitudURL,
       validez, tiempo_entrega: entrega,
       condicion_pago: pagos.join(', ') || '',
       subtotal_usd: total, iva_usd: iva, total_usd: total + iva,
