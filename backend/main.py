@@ -115,3 +115,14 @@ def _migrar_solicitudes_insumos():
         """))
 
 _migrar_solicitudes_insumos()
+
+def _migrar_solicitudes_insumos_v2():
+    from sqlalchemy import text
+    with engine.begin() as con:
+        cols = [r[1] for r in con.execute(text("PRAGMA table_info(solicitudes_insumos)"))]
+        if not cols:
+            return
+        if "nro_solicitud" not in cols:
+            con.execute(text("ALTER TABLE solicitudes_insumos ADD COLUMN nro_solicitud VARCHAR(10)"))
+
+_migrar_solicitudes_insumos_v2()
