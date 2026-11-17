@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, datetime
 from ..database import get_db
 from ..models import (SolicitudInsumos, SolicitudInsumoItem, Proveedor,
                       EstadoSolicitudInsumos, EstadoProveedor, TipoProveedor,
@@ -58,9 +58,11 @@ class SolicitudInsumoOut(BaseModel):
     iva_usd: Optional[float]
     total_usd: Optional[float]
     estado: str
-    creado_en: Optional[str] = None
+    creado_en: Optional[object] = None
     items: List[ItemOut] = []
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
+        json_encoders = {object: str}
 
 class AprobarItemsIn(BaseModel):
     item_ids: List[int]
