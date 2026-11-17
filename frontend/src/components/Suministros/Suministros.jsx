@@ -64,10 +64,10 @@ export default function Suministros() {
   return (
     <div>
       <div style={{ display: 'flex', gap: 4, padding: '0 32px', borderBottom: '1px solid #eee', maxWidth: 1300, margin: '0 auto' }}>
-        {pestana('compras', 'Compras')}
         {pestana('pedidos', 'Pedido de Suministros')}
-        {pestana('impacto', 'Impacto Gastos en el Recibo')}
         {pestana('cotizaciones', 'Cotizaciones Recibidas')}
+        {pestana('compras', 'Compras')}
+        {pestana('impacto', 'Impacto Gastos en el Recibo')}
       </div>
       {vista === 'compras' && <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />}
       {vista === 'pedidos' && <PedidosSuministros onComprar={comprarPedido} />}
