@@ -139,18 +139,9 @@ export default function PedidosSuministros({ onComprar }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <select value={filtro} onChange={e => setFiltro(e.target.value)}
-            style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14 }}>
-            <option value="">Todos</option>
-            {ESTADOS.map(e => <option key={e} value={e}>{e}s</option>)}
-          </select>
           <button onClick={() => window.open('https://cnviejo2-production-46d5.up.railway.app/solicitud', '_blank')}
             style={{ padding: '10px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
             📋 Solicitud de Materiales
-          </button>
-          <button onClick={abrirNuevo}
-            style={{ padding: '10px 20px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            + Agregar al pedido
           </button>
         </div>
       </div>
