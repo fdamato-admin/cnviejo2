@@ -171,7 +171,7 @@ export default function CotizacionesInsumos() {
                     {esAdmin && (
                       <button onClick={() => eliminarCotizacion(c.id)}
                         style={{ padding: '5px 10px', border: '1px solid #c00', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer', color: '#c00', fontWeight: 500 }}>
-                        ðŸ—‘
+                        🗑
                       </button>
                     )}
                   </td>
