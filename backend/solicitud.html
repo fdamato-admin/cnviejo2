@@ -189,12 +189,25 @@ function addItem(desc='', cant='', unit='') {
     <select id="unit-${id}">
       <option value="und" ${unit==='und'?'selected':''}>und</option>
       <option value="m2" ${unit==='m2'?'selected':''}>m²</option>
+      <option value="m3" ${unit==='m3'?'selected':''}>m³</option>
       <option value="ml" ${unit==='ml'?'selected':''}>ml</option>
       <option value="kg" ${unit==='kg'?'selected':''}>kg</option>
       <option value="lt" ${unit==='lt'?'selected':''}>lt</option>
+      <option value="1/2 lt" ${unit==='1/2 lt'?'selected':''}>1/2 lt</option>
+      <option value="1/4 lt" ${unit==='1/4 lt'?'selected':''}>1/4 lt</option>
+      <option value="galon" ${unit==='galon'?'selected':''}>galón</option>
+      <option value="1/2 galon" ${unit==='1/2 galon'?'selected':''}>1/2 galón</option>
+      <option value="1/4 galon" ${unit==='1/4 galon'?'selected':''}>1/4 galón</option>
+      <option value="cunete" ${unit==='cunete'?'selected':''}>cuñete</option>
+      <option value="garrafa" ${unit==='garrafa'?'selected':''}>garrafa</option>
+      <option value="tambor" ${unit==='tambor'?'selected':''}>tambor</option>
+      <option value="bidon" ${unit==='bidon'?'selected':''}>bidón</option>
       <option value="saco" ${unit==='saco'?'selected':''}>saco</option>
+      <option value="bolsa" ${unit==='bolsa'?'selected':''}>bolsa</option>
       <option value="rollo" ${unit==='rollo'?'selected':''}>rollo</option>
       <option value="caja" ${unit==='caja'?'selected':''}>caja</option>
+      <option value="paquete" ${unit==='paquete'?'selected':''}>paquete</option>
+      <option value="par" ${unit==='par'?'selected':''}>par</option>
       <option value="global" ${unit==='global'?'selected':''}>global</option>
     </select>
     <button class="btn-del" onclick="removeItem(${id})">×</button>
