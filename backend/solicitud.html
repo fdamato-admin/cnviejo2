@@ -124,7 +124,7 @@
 
     <div id="tabla-proveedor-wrap">
       <table class="readonly-table" id="tabla-precios">
-        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th></tr></thead>
+        <thead><tr><th>#</th><th>Descripción solicitada</th><th>Cant.</th><th>Unidad</th><th>Producto ofrecido (marca/presentación)</th><th>Precio unit. (USD)</th><th>Precio unit. (Bs.)</th><th>Subtotal (USD)</th><th style="text-align:center">IVA 16%</th><th>IVA (USD)</th></tr></thead>
         <tbody id="tbody-precios"></tbody>
       </table>
     </div>
@@ -319,6 +319,8 @@ function loadItemsFromURL() {
         <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRowManual(${idx})" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
         <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
         <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
+        <td style="text-align:center"><input type="checkbox" id="iva-chk-${idx}" onchange="recalcRowManual(${idx})" title="Aplica IVA"></td>
+        <td id="iva-${idx}" style="font-size:12px;color:#c0392b;white-space:nowrap">—</td>
       `;
       tbody.appendChild(tr);
     }
@@ -348,6 +350,8 @@ function loadItemsFromURL() {
       <td><input type="number" step="0.01" min="0" placeholder="0.00" id="precio-${idx}" oninput="recalcRow(${idx})" style="width:90px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></td>
       <td id="bs-${idx}" style="font-size:12px;color:#555;white-space:nowrap">—</td>
       <td id="sub-${idx}" style="font-weight:600;color:#1a3a5c;white-space:nowrap">—</td>
+      <td style="text-align:center"><input type="checkbox" id="iva-chk-${idx}" onchange="recalcRow(${idx})" title="Aplica IVA"></td>
+      <td id="iva-${idx}" style="font-size:12px;color:#c0392b;white-space:nowrap">—</td>
     `;
     tbody.appendChild(tr);
   });
@@ -421,7 +425,26 @@ function enviarProveedor() {
 
   const conFactura = document.getElementById('pago-fac').checked || document.getElementById('pago-amb').checked;
   let iva = 0;
-  if (conFactura) iva = total * 0.16;
+  if (iParams.length) {
+    iParams.forEach((raw, idx) => {
+      const conIvaItem = document.getElementById('iva-chk-'+idx)?.checked;
+      if (conIvaItem) {
+        const [, cant] = raw.split('|');
+        const precio = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
+        const cantNum = parseFloat(cant || 1);
+        iva += precio * cantNum * 0.16;
+      }
+    });
+  } else {
+    for (let i = 0; i < 5; i++) {
+      const conIvaItem = document.getElementById('iva-chk-'+i)?.checked;
+      if (conIvaItem) {
+        const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);
+        const c = parseFloat(document.getElementById('cant-prov-'+i)?.value || 1);
+        iva += p * c * 0.16;
+      }
+    }
+  }
   const totalFinal = total + iva;
   const totalBS = tasa ? total * tasa : 0;
   const ivaBS = tasa ? iva * tasa : 0;
@@ -561,8 +584,11 @@ function recalcRowManual(idx) {
   const cant = parseFloat(document.getElementById('cant-prov-'+idx)?.value || 1);
   const precioBS = tasa ? precio * tasa : 0;
   const subtotal = precio * cant;
+  const conIva = document.getElementById('iva-chk-'+idx)?.checked;
+  const ivaItem = conIva ? subtotal * 0.16 : 0;
   document.getElementById('bs-'+idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
   document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
+  if (document.getElementById('iva-'+idx)) document.getElementById('iva-'+idx).textContent = conIva && precio ? '$' + ivaItem.toFixed(2) : '—';
   let total = 0;
   for (let i = 0; i < 5; i++) {
     const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);
@@ -581,8 +607,11 @@ function recalcRow(idx) {
   const cant = iParams[idx] ? parseFloat(iParams[idx].split('|')[1] || 1) : 1;
   const precioBS = tasa ? precio * tasa : 0;
   const subtotal = precio * cant;
+  const conIva = document.getElementById('iva-chk-'+idx)?.checked;
+  const ivaItem = conIva ? subtotal * 0.16 : 0;
   document.getElementById('bs-'+idx).textContent = tasa && precio ? 'Bs. ' + precioBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
   document.getElementById('sub-'+idx).textContent = precio ? '$' + subtotal.toFixed(2) : '—';
+  if (document.getElementById('iva-'+idx)) document.getElementById('iva-'+idx).textContent = conIva && precio ? '$' + ivaItem.toFixed(2) : '—';
   let total = 0;
   iParams.forEach((_, i) => {
     const p = parseFloat(document.getElementById('precio-'+i)?.value || 0);

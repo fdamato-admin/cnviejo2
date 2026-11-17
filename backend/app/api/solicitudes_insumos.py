@@ -7,7 +7,7 @@ from datetime import date
 from ..database import get_db
 from ..models import (SolicitudInsumos, SolicitudInsumoItem, Proveedor,
                       EstadoSolicitudInsumos, EstadoProveedor, TipoProveedor,
-                      CompraSuministro, NivelPermiso)
+                      CompraSuministro, Suministro, NivelPermiso)
 from ..auth import get_current_user, require_permiso
 from ..models import Usuario
 
@@ -160,26 +160,37 @@ def convertir_compra(id: int, db: Session = Depends(get_db)):
     hoy = date.today()
     items_aprobados = [it for it in s.items if it.aprobado]
 
-    if items_aprobados:
-        for it in items_aprobados:
-            try:
-                cant = float(it.cantidad) if it.cantidad else None
-            except (ValueError, TypeError):
-                cant = None
-            compra = CompraSuministro(
-                suministro_id=it.id,
-                fecha_compra=hoy,
-                cantidad=cant,
-                monto_usd=it.subtotal_usd,
-                nombre=it.descripcion
-            )
-            db.add(compra)
-    else:
+    if not items_aprobados:
+        raise HTTPException(400, "No hay items aprobados para convertir")
+
+    for it in items_aprobados:
+        try:
+            cant = float(it.cantidad) if it.cantidad else None
+        except (ValueError, TypeError):
+            cant = None
+
+        # Crear el suministro en la BD (solo al momento de convertir)
+        nuevo_sum = Suministro(
+            nombre=it.alternativa or it.descripcion,
+            categoria="Cotizacion",
+            unidad=it.unidad or "und",
+            proveedor=s.proveedor_nombre,
+            ultima_fecha_compra=hoy,
+            ultimo_precio=it.precio_usd,
+            tasa_cambio=it.tasa_bs,
+            precio_bs=(it.precio_usd * it.tasa_bs) if (it.precio_usd and it.tasa_bs) else None,
+            tipo_documento=s.condicion_pago or None,
+            numero_documento=f"COT-{s.id}"
+        )
+        db.add(nuevo_sum)
+        db.flush()  # obtener nuevo_sum.id
+
         compra = CompraSuministro(
-            suministro_id=s.id,
+            suministro_id=nuevo_sum.id,
             fecha_compra=hoy,
-            monto_usd=s.total_usd,
-            nombre=f"Cotizacion #{s.id} - {s.proveedor_nombre or 'Sin proveedor'} - {s.obra}"
+            cantidad=cant,
+            monto_usd=it.subtotal_usd,
+            nombre=it.alternativa or it.descripcion
         )
         db.add(compra)
 
