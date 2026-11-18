@@ -26,7 +26,7 @@ function ArticuloCombo({ value, onChange, opciones, estilo }) {
       const r = refInput.current.getBoundingClientRect();
       setPos({ top: r.bottom + window.scrollY, left: r.left + window.scrollX, width: Math.max(r.width, 240) });
     }
-    setQ('');
+    if (!abierto) setQ('');
     setAbierto(true);
   };
 
