@@ -318,7 +318,7 @@ export default function PedidosSuministros({ onComprar }) {
       {cargando ? (
         <p style={{ color: '#888', textAlign: 'center', padding: 40 }}>Cargando...</p>
       ) : pedidos.length === 0 ? (
-        <div style={{ padding: '20px 0' }} />
+        <div style={{ padding: '4px 0' }} />
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
@@ -419,7 +419,7 @@ export default function PedidosSuministros({ onComprar }) {
       )}
 
       {/* HISTORIAL DE SOLICITUDES DE COTIZACIÓN */}
-      <div style={{ marginTop: 40, borderTop: '2px solid #e8e8e8', paddingTop: 24 }}>
+      <div style={{ marginTop: 20, borderTop: '2px solid #e8e8e8', paddingTop: 16 }}>
         <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>Historial de Solicitudes de Cotización</h2>
         <p style={{ margin: '0 0 16px', fontSize: 13, color: '#777' }}>Solicitudes enviadas a proveedores</p>
         <HistorialSolicitudes />
