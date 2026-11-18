@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 
-const ESTADOS = ['Pendiente', 'Comprado'];
+const ESTADOS = ['Pendiente', 'Comprado', 'Donado'];
 const ESTADO_COLOR = {
   Pendiente: { bg: '#fff3cd', color: '#856404' },
   Comprado:  { bg: '#d1f5e0', color: '#145a32' },
+  Donado:    { bg: '#ede9fe', color: '#5b21b6' },
 };
 
 export default function InsumosPorComprar() {
@@ -65,6 +66,12 @@ export default function InsumosPorComprar() {
     cargar();
   };
 
+  const marcarDonado = async (item) => {
+    const nuevoEstado = item.estado === 'Donado' ? 'Pendiente' : 'Donado';
+    await API.put(`/pedidos-suministros/${item.id}`, { estado: nuevoEstado });
+    cargar();
+  };
+
   const eliminar = async (id) => {
     await API.delete(`/pedidos-suministros/${id}`);
     setConfirmEliminar(null);
@@ -94,7 +101,7 @@ export default function InsumosPorComprar() {
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-        {[['', 'Todos'], ['Pendiente', 'Pendientes'], ['Comprado', 'Comprados']].map(([val, lab]) => (
+        {[['', 'Todos'], ['Pendiente', 'Pendientes'], ['Comprado', 'Comprados'], ['Donado', 'Donados']].map(([val, lab]) => (
           <button key={val} onClick={() => setFiltroEstado(val)}
             style={{ padding: '7px 16px', borderRadius: 20, border: '1px solid', fontSize: 13, cursor: 'pointer', fontWeight: 500,
               background: filtroEstado === val ? '#2a78d6' : '#fff',
@@ -131,9 +138,9 @@ export default function InsumosPorComprar() {
                 const ec = ESTADO_COLOR[item.estado] || {};
                 return (
                   <tr key={item.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafbfd', borderBottom: '1px solid #eee',
-                    opacity: item.estado === 'Comprado' ? 0.6 : 1 }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 600, color: item.estado === 'Comprado' ? '#888' : '#1a1a1a',
-                      textDecoration: item.estado === 'Comprado' ? 'line-through' : 'none' }}>
+                    opacity: item.estado === 'Comprado' || item.estado === 'Donado' ? 0.6 : 1 }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 600, color: item.estado === 'Comprado' || item.estado === 'Donado' ? '#888' : '#1a1a1a',
+                      textDecoration: item.estado === 'Comprado' || item.estado === 'Donado' ? 'line-through' : 'none' }}>
                       {item.nombre}
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1a3a5c' }}>{item.cantidad}</td>
@@ -149,14 +156,26 @@ export default function InsumosPorComprar() {
                     </td>
                     <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => marcarComprado(item)}
-                          title={item.estado === 'Comprado' ? 'Volver a pendiente' : 'Marcar como comprado'}
-                          style={{ padding: '5px 10px', border: '1px solid', borderRadius: 6, fontSize: 12, cursor: 'pointer',
-                            background: item.estado === 'Comprado' ? '#fff3cd' : '#d1f5e0',
-                            color: item.estado === 'Comprado' ? '#856404' : '#145a32',
-                            borderColor: item.estado === 'Comprado' ? '#f0c040' : '#52c77a' }}>
-                          {item.estado === 'Comprado' ? '↩ Pendiente' : '✓ Comprado'}
-                        </button>
+                        {item.estado !== 'Donado' && (
+                          <button onClick={() => marcarComprado(item)}
+                            title={item.estado === 'Comprado' ? 'Volver a pendiente' : 'Marcar como comprado'}
+                            style={{ padding: '5px 10px', border: '1px solid', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                              background: item.estado === 'Comprado' ? '#fff3cd' : '#d1f5e0',
+                              color: item.estado === 'Comprado' ? '#856404' : '#145a32',
+                              borderColor: item.estado === 'Comprado' ? '#f0c040' : '#52c77a' }}>
+                            {item.estado === 'Comprado' ? '↩ Pendiente' : '✓ Comprado'}
+                          </button>
+                        )}
+                        {item.estado !== 'Comprado' && (
+                          <button onClick={() => marcarDonado(item)}
+                            title={item.estado === 'Donado' ? 'Volver a pendiente' : 'Marcar como donado'}
+                            style={{ padding: '5px 10px', border: '1px solid', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                              background: item.estado === 'Donado' ? '#fff3cd' : '#ede9fe',
+                              color: item.estado === 'Donado' ? '#856404' : '#5b21b6',
+                              borderColor: item.estado === 'Donado' ? '#f0c040' : '#a78bfa' }}>
+                            {item.estado === 'Donado' ? '↩ Pendiente' : '🎁 Donado'}
+                          </button>
+                        )}
                         <button onClick={() => abrirEditar(item)}
                           style={{ padding: '5px 10px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#333' }}>
                           Editar
