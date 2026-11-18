@@ -70,6 +70,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
   const [form, setForm] = useState(suministro ? { ...vacio, ...suministro } : { ...vacio, ...(inicial || {}) });
   const [ivaDefecto, setIvaDefecto] = useState(16);
   const [existentes, setExistentes] = useState([]);
+  const [catalogo, setCatalogo] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [mostrarProv, setMostrarProv] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -83,6 +84,9 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
       .catch(() => {});
     API.get('/suministros/')
       .then(r => setExistentes(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {});
+    API.get('/catalogo-insumos/')
+      .then(r => setCatalogo(Array.isArray(r.data) ? r.data : []))
       .catch(() => {});
     API.get('/proveedores/')
       .then(r => setProveedores(Array.isArray(r.data) ? r.data : []))
@@ -131,11 +135,21 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
     }
     // Si el nombre coincide con un suministro ya creado, se traen sus datos fijos
     if (k === 'nombre' && !suministro) {
-      const m = existentes.find(x => (x.nombre || '').trim().toUpperCase() === nf.nombre.trim());
+      const nombreUp = nf.nombre.trim().toUpperCase();
+      const m = existentes.find(x => (x.nombre || '').trim().toUpperCase() === nombreUp);
       if (m) {
         ['categoria', 'unidad', 'frecuencia_compra', 'proveedor'].forEach(c => {
           if (vacioONulo(nf[c]) && !vacioONulo(m[c])) nf[c] = m[c];
         });
+      } else {
+        // Buscar en el catálogo si no está en compras anteriores
+        const cat = catalogo.find(x => (x.nombre || '').trim().toUpperCase() === nombreUp);
+        if (cat) {
+          if (vacioONulo(nf.categoria) && cat.categoria) nf.categoria = cat.categoria;
+          if (vacioONulo(nf.unidad) && cat.unidad) nf.unidad = cat.unidad;
+          if (vacioONulo(nf.proveedor) && cat.proveedor_habitual) nf.proveedor = cat.proveedor_habitual.toUpperCase();
+          if (vacioONulo(nf.ultimo_precio) && cat.ultimo_precio) nf.ultimo_precio = String(cat.ultimo_precio);
+        }
       }
     }
     return nf;
@@ -290,7 +304,10 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
           <div style={{ gridColumn: '1 / -1' }}>
             {campo('Nombre del suministro', 'nombre', 'text', true, { list: 'lista-suministros', autoComplete: 'off', placeholder: 'Escribe o elige uno ya creado' })}
             <datalist id="lista-suministros">
-              {existentes.map(x => <option key={x.id} value={x.nombre} />)}
+              {existentes.map(x => <option key={`s-${x.id}`} value={x.nombre} />)}
+              {catalogo
+                .filter(c => !existentes.some(x => (x.nombre||'').toUpperCase() === (c.nombre||'').toUpperCase()))
+                .map(c => <option key={`cat-${c.id}`} value={c.nombre} label={`[${c.codigo}] ${c.categoria}`} />)}
             </datalist>
             {coincide && (
               <div style={{ marginTop: -8, marginBottom: 16, fontSize: 12, color: '#1a7a3c' }}>
