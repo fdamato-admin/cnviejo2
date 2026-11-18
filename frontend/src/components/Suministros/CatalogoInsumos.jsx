@@ -11,7 +11,7 @@ const CATEGORIAS = [
   'Informática y tecnología', 'Otro',
 ];
 
-const FORM_VACIO = { nombre: '', marca: '', categoria: '', unidad: '', proveedor_habitual: '', ultimo_precio: '', notas: '' };
+const FORM_VACIO = { nombre: '', marca: '', categoria: '', unidad: '', proveedor_habitual_id: '', ultimo_precio: '', notas: '' };
 
 export default function CatalogoInsumos() {
   const [lista, setLista] = useState([]);
@@ -24,9 +24,14 @@ export default function CatalogoInsumos() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [confirmEliminar, setConfirmEliminar] = useState(null);
+  const [proveedores, setProveedores] = useState([]);
   // Detección de duplicados
   const [duplicados, setDuplicados] = useState([]);
   const buscarDupTimer = useRef(null);
+
+  useEffect(() => {
+    API.get('/proveedores/').then(({ data }) => setProveedores(data)).catch(() => {});
+  }, []);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -64,12 +69,14 @@ export default function CatalogoInsumos() {
 
   const abrirEditar = (item) => {
     setEditando(item);
+    // Buscar el ID del proveedor por nombre para pre-seleccionar
+    const prov = proveedores.find(p => p.nombre === item.proveedor_habitual || p.empresa === item.proveedor_habitual);
     setForm({
       nombre: item.nombre,
       marca: item.marca || '',
       categoria: item.categoria,
       unidad: item.unidad || '',
-      proveedor_habitual: item.proveedor_habitual || '',
+      proveedor_habitual_id: prov ? String(prov.id) : '',
       ultimo_precio: item.ultimo_precio ?? '',
       notas: item.notas || '',
     });
@@ -83,12 +90,13 @@ export default function CatalogoInsumos() {
     if (!form.categoria) { setError('La categoría es obligatoria'); return; }
     setGuardando(true); setError('');
     try {
+      const provSel = proveedores.find(p => String(p.id) === form.proveedor_habitual_id);
       const payload = {
         nombre: form.nombre.trim(),
         marca: form.marca.trim() || null,
         categoria: form.categoria,
         unidad: form.unidad || null,
-        proveedor_habitual: form.proveedor_habitual.trim() || null,
+        proveedor_habitual: provSel ? (provSel.empresa || provSel.nombre) : null,
         ultimo_precio: form.ultimo_precio !== '' ? parseFloat(form.ultimo_precio) : null,
         notas: form.notas.trim() || null,
       };
@@ -257,8 +265,12 @@ export default function CatalogoInsumos() {
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>Proveedor habitual</label>
-              <input value={form.proveedor_habitual} onChange={e => setForm(f => ({ ...f, proveedor_habitual: e.target.value }))}
-                style={inp} placeholder="Ej: SUMINISTROS DEL BLANCO" />
+              <select value={form.proveedor_habitual_id} onChange={e => setForm(f => ({ ...f, proveedor_habitual_id: e.target.value }))} style={inp}>
+                <option value="">— Sin proveedor —</option>
+                {proveedores.map(p => (
+                  <option key={p.id} value={p.id}>{p.empresa ? `${p.empresa} (${p.nombre})` : p.nombre}</option>
+                ))}
+              </select>
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={lbl}>Notas</label>
