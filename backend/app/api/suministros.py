@@ -93,7 +93,29 @@ def eliminar_suministro(id: int, db: Session = Depends(get_db), usuario: Usuario
     if not s:
         raise HTTPException(status_code=404, detail="Suministro no encontrado")
     nombre = s.nombre
+
+    # Si vino de una cotización (numero_documento = "COT-{solicitud_id}"),
+    # revisar si quedan otras compras de esa cotización. Si no quedan, revertir estado a cotizada.
+    solicitud_id_origen = None
+    if s.numero_documento and s.numero_documento.startswith("COT-"):
+        try:
+            solicitud_id_origen = int(s.numero_documento.split("-", 1)[1])
+        except (ValueError, IndexError):
+            pass
+
     db.delete(s)
+    db.flush()
+
+    if solicitud_id_origen is not None:
+        from app.models import SolicitudInsumos, EstadoSolicitudInsumos
+        quedan = db.query(Suministro).filter(
+            Suministro.numero_documento == f"COT-{solicitud_id_origen}"
+        ).count()
+        if quedan == 0:
+            sol = db.query(SolicitudInsumos).filter(SolicitudInsumos.id == solicitud_id_origen).first()
+            if sol and sol.estado == EstadoSolicitudInsumos.convertida:
+                sol.estado = EstadoSolicitudInsumos.cotizada
+
     registrar(db, usuario, "eliminar", "suministro", id, f"Nombre: {nombre}")
     db.commit()
 

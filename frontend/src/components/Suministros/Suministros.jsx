@@ -200,7 +200,7 @@ function Compras({ pedido, onPedidoUsado }) {
           <p style={{ fontSize: 13, marginTop: 8 }}>Presiona "+ Factura / Nota de entrega" para agregar el primero</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
@@ -222,7 +222,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   <th key={h.t || 'acciones'}
                     onClick={h.k ? () => cambiarOrden(h.k) : undefined}
                     title={h.k ? 'Clic para ordenar' : undefined}
-                    style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none' }}>
+                    style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none', position: 'sticky', top: 0, background: '#f5f7fa', zIndex: 1 }}>
                     {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' ↕' : '')}
                   </th>
                 ))}

@@ -289,6 +289,24 @@ def eliminar_solicitud(
     s = db.query(SolicitudInsumos).filter(SolicitudInsumos.id == id).first()
     if not s:
         raise HTTPException(404, "No encontrada")
+
+    era_convertida = s.estado == EstadoSolicitudInsumos.convertida
+    nro = s.nro_solicitud
+
     db.delete(s)
+    db.flush()
+
+    # Si la que se eliminó estaba convertida, revisar si quedan otras convertidas
+    # del mismo nro_solicitud. Si no quedan, revertir las restantes a "cotizada"
+    if era_convertida and nro:
+        quedan_convertidas = db.query(SolicitudInsumos).filter(
+            SolicitudInsumos.nro_solicitud == nro,
+            SolicitudInsumos.estado == EstadoSolicitudInsumos.convertida
+        ).count()
+        if quedan_convertidas == 0:
+            db.query(SolicitudInsumos).filter(
+                SolicitudInsumos.nro_solicitud == nro
+            ).update({"estado": EstadoSolicitudInsumos.cotizada})
+
     db.commit()
     return {"ok": True}
