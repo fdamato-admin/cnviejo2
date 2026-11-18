@@ -268,3 +268,19 @@ class PedidoCotizacionItem(Base):
     cantidad = Column(String(20), nullable=True)
     unidad = Column(String(30), nullable=True)
     pedido = relationship("PedidoCotizacion", back_populates="items")
+
+
+class CatalogoInsumo(Base):
+    __tablename__ = "catalogo_insumos"
+    id = Column(Integer, primary_key=True, index=True)
+    codigo = Column(String(12), unique=True, nullable=False, index=True)
+    nombre = Column(String(200), nullable=False)
+    marca = Column(String(100), nullable=True)
+    categoria = Column(String(100), nullable=False)
+    unidad = Column(String(50), nullable=True)
+    proveedor_habitual = Column(String(150), nullable=True)
+    ultimo_precio = Column(Float, nullable=True)
+    ultima_fecha_compra = Column(String(20), nullable=True)
+    notas = Column(Text, nullable=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())

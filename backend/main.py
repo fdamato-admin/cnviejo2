@@ -155,3 +155,28 @@ def _migrar_pedidos_cotizacion():
         """))
 
 _migrar_pedidos_cotizacion()
+
+from app.api import catalogo_insumos
+app.include_router(catalogo_insumos.router, prefix="/api")
+
+def _migrar_catalogo_insumos():
+    from sqlalchemy import text
+    with engine.begin() as con:
+        con.execute(text("""
+            CREATE TABLE IF NOT EXISTS catalogo_insumos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                codigo VARCHAR(12) NOT NULL UNIQUE,
+                nombre VARCHAR(200) NOT NULL,
+                marca VARCHAR(100),
+                categoria VARCHAR(100) NOT NULL,
+                unidad VARCHAR(50),
+                proveedor_habitual VARCHAR(150),
+                ultimo_precio FLOAT,
+                ultima_fecha_compra VARCHAR(20),
+                notas TEXT,
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en DATETIME
+            )
+        """))
+
+_migrar_catalogo_insumos()
