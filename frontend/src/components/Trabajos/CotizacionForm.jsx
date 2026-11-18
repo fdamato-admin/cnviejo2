@@ -13,12 +13,26 @@ export default function CotizacionForm({ trabajoId, cotizacion, onClose }) {
   const [proveedores, setProveedores] = useState([]);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [archivoAdjunto, setArchivoAdjunto] = useState(null);
+  const [previstaUrl, setPrevistaUrl] = useState(null);
 
   useEffect(() => {
     API.get('/proveedores/').then(r => setProveedores(r.data)).catch(() => {});
   }, []);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: CAMPOS_TEXTO.includes(k) ? v.toUpperCase() : v }));
+
+  const onArchivoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setArchivoAdjunto(file);
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','webp','heic'].includes(ext)) {
+      setPrevistaUrl(URL.createObjectURL(file));
+    } else {
+      setPrevistaUrl(null);
+    }
+  };
 
   const guardar = async () => {
     if (!form.tipo) { setError('Selecciona el tipo'); return; }
@@ -27,10 +41,25 @@ export default function CotizacionForm({ trabajoId, cotizacion, onClose }) {
     try {
       const payload = { ...form, trabajo_id: trabajoId };
       if (form.monto === '') payload.monto = null;
+      let cotId;
       if (cotizacion) {
         await API.put(`/trabajos/cotizaciones/${cotizacion.id}`, payload);
+        cotId = cotizacion.id;
       } else {
-        await API.post(`/trabajos/${trabajoId}/cotizaciones`, payload);
+        const res = await API.post(`/trabajos/${trabajoId}/cotizaciones`, payload);
+        cotId = res.data.id;
+      }
+      // Si hay archivo adjunto, subirlo al mismo endpoint
+      if (archivoAdjunto && cotId) {
+        const fd = new FormData();
+        fd.append('file', archivoAdjunto);
+        const baseURL = API.defaults.baseURL;
+        const token = localStorage.getItem('token');
+        await fetch(baseURL + '/trabajos/cotizaciones/' + cotId + '/documento', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: fd
+        });
       }
       onClose();
     } catch (e) {
@@ -120,6 +149,25 @@ export default function CotizacionForm({ trabajoId, cotizacion, onClose }) {
             <textarea value={form.notas || ''} onChange={e => set('notas', e.target.value)} rows={2}
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
           </div>
+        </div>
+
+        {/* Adjuntar cotización (WhatsApp / email) */}
+        <div style={{ marginBottom: 16, border: '1.5px dashed #c5d8f7', borderRadius: 10, padding: '14px 16px', background: '#f5f8ff' }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a3a5c', marginBottom: 8 }}>
+            📎 Adjuntar cotización (WhatsApp / email)
+          </label>
+          <p style={{ margin: '0 0 10px', fontSize: 12, color: '#777' }}>Imagen o PDF de la cotización recibida</p>
+          <label style={{ display: 'inline-block', padding: '7px 16px', background: '#2a78d6', color: '#fff', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+            {archivoAdjunto ? `✓ ${archivoAdjunto.name}` : 'Seleccionar archivo'}
+            <input type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={onArchivoChange} />
+          </label>
+          {archivoAdjunto && (
+            <button onClick={() => { setArchivoAdjunto(null); setPrevistaUrl(null); }}
+              style={{ marginLeft: 10, background: 'none', border: 'none', color: '#c00', fontSize: 13, cursor: 'pointer' }}>✕ Quitar</button>
+          )}
+          {previstaUrl && (
+            <img src={previstaUrl} alt="Vista previa" style={{ display: 'block', marginTop: 10, maxWidth: '100%', maxHeight: 160, objectFit: 'contain', borderRadius: 8, border: '1px solid #e0e0e0' }} />
+          )}
         </div>
 
         {error && <p style={{ color: '#e24b4a', fontSize: 13, marginBottom: 16 }}>{error}</p>}
