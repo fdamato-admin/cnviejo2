@@ -4,7 +4,7 @@ import { UNIDADES } from './SuministroForm';
 import UnidadCombo from './UnidadCombo';
 
 const BACKEND = 'https://cnviejo2-production-46d5.up.railway.app';
-const thS = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', fontSize: 13 };
+const thS = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', fontSize: 13, position: 'sticky', top: 0, background: '#f5f7fa', zIndex: 1 };
 const tdS = { padding: '10px 14px', verticalAlign: 'middle' };
 const inp = { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
 
@@ -72,7 +72,7 @@ function HistorialSolicitudes() {
   return (
     <div>
       {aviso && <span style={{ background:'#e8f6ec', color:'#1a7a3c', padding:'6px 14px', borderRadius:8, fontSize:13, fontWeight:600, display:'inline-block', marginBottom:10 }}>{aviso}</span>}
-      <div style={{ overflowX:'auto' }}>
+      <div style={{ overflowX:'auto', maxHeight:'60vh', overflowY:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:'#f5f7fa' }}>

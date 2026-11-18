@@ -164,12 +164,12 @@ export default function CotizacionesInsumos() {
           <p style={{ fontSize: 13, marginTop: 8 }}>Los proveedores envian cotizaciones desde el enlace generado en la solicitud</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
                 {['Nro. Sol.', 'Fecha', 'Proveedor', 'Telefono', 'Obra', 'Subtotal USD', 'IVA', 'Total USD', 'Estado', ''].map(h => (
-                  <th key={h || 'acc'} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h || 'acc'} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', position: 'sticky', top: 0, background: '#f5f7fa', zIndex: 1 }}>{h}</th>
                 ))}
               </tr>
             </thead>
