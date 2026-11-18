@@ -126,3 +126,32 @@ def _migrar_solicitudes_insumos_v2():
             con.execute(text("ALTER TABLE solicitudes_insumos ADD COLUMN nro_solicitud VARCHAR(10)"))
 
 _migrar_solicitudes_insumos_v2()
+
+from app.api import pedidos_cotizacion
+app.include_router(pedidos_cotizacion.router, prefix="/api")
+
+def _migrar_pedidos_cotizacion():
+    from sqlalchemy import text
+    with engine.begin() as con:
+        con.execute(text("""
+            CREATE TABLE IF NOT EXISTS pedidos_cotizacion (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nro_solicitud VARCHAR(10) NOT NULL UNIQUE,
+                obra VARCHAR(300) NOT NULL,
+                fecha_requerida VARCHAR(20),
+                observaciones TEXT,
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en DATETIME
+            )
+        """))
+        con.execute(text("""
+            CREATE TABLE IF NOT EXISTS pedidos_cotizacion_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pedido_id INTEGER NOT NULL REFERENCES pedidos_cotizacion(id),
+                descripcion VARCHAR(300) NOT NULL,
+                cantidad VARCHAR(20),
+                unidad VARCHAR(30)
+            )
+        """))
+
+_migrar_pedidos_cotizacion()

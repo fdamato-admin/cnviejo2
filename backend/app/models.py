@@ -245,3 +245,24 @@ class SolicitudInsumoItem(Base):
     subtotal_usd = Column(Numeric(12,2), nullable=True)
     aprobado = Column(Boolean, default=True)  # para seleccionar qué comprar
     solicitud = relationship("SolicitudInsumos", back_populates="items")
+
+# --- Pedido de cotización (lado solicitante) ---
+class PedidoCotizacion(Base):
+    __tablename__ = "pedidos_cotizacion"
+    id = Column(Integer, primary_key=True, index=True)
+    nro_solicitud = Column(String(10), nullable=False, unique=True, index=True)
+    obra = Column(String(300), nullable=False)
+    fecha_requerida = Column(String(20), nullable=True)
+    observaciones = Column(Text, nullable=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
+    items = relationship("PedidoCotizacionItem", back_populates="pedido", cascade="all, delete-orphan")
+
+class PedidoCotizacionItem(Base):
+    __tablename__ = "pedidos_cotizacion_items"
+    id = Column(Integer, primary_key=True, index=True)
+    pedido_id = Column(Integer, ForeignKey("pedidos_cotizacion.id"), nullable=False)
+    descripcion = Column(String(300), nullable=False)
+    cantidad = Column(String(20), nullable=True)
+    unidad = Column(String(30), nullable=True)
+    pedido = relationship("PedidoCotizacion", back_populates="items")

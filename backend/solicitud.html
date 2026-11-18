@@ -290,6 +290,20 @@ async function generarEnlace() {
   document.getElementById('enlace-texto').textContent = data.urlProv;
   document.getElementById('enlace-box').style.display = 'block';
   document.getElementById('btn-copiar').textContent = '📋 Copiar enlace';
+
+  // Guardar la solicitud del solicitante en la BD
+  const itemsParaGuardar = getItems().map(it => ({ descripcion: it.desc, cantidad: it.cant, unidad: it.unit }));
+  fetch('https://cnviejo2-production-46d5.up.railway.app/api/pedidos-cotizacion/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nro_solicitud: window._nroSolicitud,
+      obra: document.getElementById('obra').value.trim(),
+      fecha_requerida: document.getElementById('fecha-req').value || null,
+      observaciones: document.getElementById('obs').value.trim() || null,
+      items: itemsParaGuardar
+    })
+  }).catch(() => {}); // silencioso
 }
 
 function copiarEnlace() {
@@ -550,16 +564,18 @@ function enviarProveedor() {
   }
 
   // Guardar cotización en la BD
+  const tasaGlobal = getTasaGlobal();
   const itemsGuardar = iParams.map((raw, idx) => {
     const [desc, cant, unit] = raw.split('|');
+    const precioU = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
     return {
       descripcion: desc || '',
       cantidad: cant || '',
       unidad: unit || '',
       alternativa: document.getElementById('alt-'+idx)?.value.trim() || '',
-      precio_usd: parseFloat(document.getElementById('precio-'+idx)?.value || 0),
-      tasa_bs: parseFloat(document.getElementById('tasa-'+idx)?.value || 0),
-      subtotal_usd: parseFloat(document.getElementById('precio-'+idx)?.value || 0) * parseFloat(cant || 1)
+      precio_usd: precioU,
+      tasa_bs: tasaGlobal || 0,
+      subtotal_usd: precioU * parseFloat(cant || 1)
     };
   });
 
