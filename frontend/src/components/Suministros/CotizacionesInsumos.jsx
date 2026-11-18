@@ -204,7 +204,14 @@ export default function CotizacionesInsumos() {
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1a3a5c' }}>{fmt(c.subtotal_usd)}</td>
                     <td style={{ padding: '10px 14px', color: '#666' }}>{c.iva_usd ? fmt(c.iva_usd) : '—'}</td>
                     <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1a7a3c' }}>{fmt(c.total_usd)}</td>
-                    <td style={{ padding: '10px 14px' }}><Badge estado={c.estado} /></td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <Badge estado={c.estado} />
+                      {c.cotizacion_adjunta_url && (
+                        <a href={c.cotizacion_adjunta_url} target="_blank" rel="noreferrer"
+                          title="Ver cotización adjunta del proveedor"
+                          style={{ marginLeft: 6, fontSize: 15, textDecoration: 'none' }}>📎</a>
+                      )}
+                    </td>
                     <td style={{ padding: '10px 14px', display: 'flex', gap: 6, alignItems: 'center' }}>
                       <button onClick={() => abrirDetalle(c)}
                         style={{ padding: '5px 14px', border: '1px solid #2a78d6', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer', color: '#2a78d6', fontWeight: 500 }}>

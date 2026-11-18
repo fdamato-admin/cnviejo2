@@ -224,6 +224,8 @@ class SolicitudInsumos(Base):
     observaciones_prov = Column(Text, nullable=True)
     # Número de solicitud para agrupar cotizaciones del mismo pedido
     nro_solicitud = Column(String(10), nullable=True, index=True)
+    # Adjunto enviado por el proveedor (PDF o imagen de su propia cotización)
+    cotizacion_adjunta_url = Column(String(500), nullable=True)
     # Estado
     estado = Column(Enum(EstadoSolicitudInsumos), default=EstadoSolicitudInsumos.pendiente)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())

@@ -1,9 +1,10 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import date, datetime
+import os, uuid as _uuid, shutil as _shutil
 from ..database import get_db
 from ..models import (SolicitudInsumos, SolicitudInsumoItem, Proveedor,
                       EstadoSolicitudInsumos, EstadoProveedor, TipoProveedor,
@@ -12,6 +13,10 @@ from ..auth import get_current_user, require_permiso
 from ..models import Usuario
 
 router = APIRouter(prefix="/solicitudes-insumos", tags=["Solicitudes de Insumos"])
+
+DOCS_DIR = "/data/docs"
+os.makedirs(DOCS_DIR, exist_ok=True)
+BACKEND_URL = "https://cnviejo2-production-46d5.up.railway.app"
 
 # --- Schemas inline ---
 class ItemIn(BaseModel):
@@ -61,6 +66,7 @@ class SolicitudInsumoOut(BaseModel):
     total_usd: Optional[float]
     estado: str
     creado_en: Optional[object] = None
+    cotizacion_adjunta_url: Optional[str] = None
     items: List[ItemOut] = []
     class Config:
         from_attributes = True
@@ -279,6 +285,24 @@ def convertir_compra(id: int, db: Session = Depends(get_db)):
     s.estado = EstadoSolicitudInsumos.convertida
     db.commit()
     return {"id": s.id, "estado": s.estado}
+
+@router.post("/{id}/adjunto-cotizacion")
+async def subir_adjunto_cotizacion(id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Permite al proveedor subir su propia cotización (PDF o imagen) sin llenar el formulario."""
+    s = db.query(SolicitudInsumos).filter(SolicitudInsumos.id == id).first()
+    if not s:
+        raise HTTPException(404, "Solicitud no encontrada")
+    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+    nombre = f"cot_adjunta_{_uuid.uuid4().hex}.{ext}"
+    ruta = os.path.join(DOCS_DIR, nombre)
+    with open(ruta, "wb") as f:
+        _shutil.copyfileobj(file.file, f)
+    url = f"{BACKEND_URL}/api/trabajos/cotizaciones/docs/{nombre}"
+    s.cotizacion_adjunta_url = url
+    if s.estado == EstadoSolicitudInsumos.pendiente:
+        s.estado = EstadoSolicitudInsumos.cotizada
+    db.commit()
+    return {"url": url, "ok": True}
 
 @router.delete("/{id}")
 def eliminar_solicitud(

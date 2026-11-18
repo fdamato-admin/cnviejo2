@@ -80,6 +80,24 @@
 
   <!-- PANEL PROVEEDOR -->
   <div id="panel-proveedor" class="panel">
+    <!-- Opción rápida: adjuntar cotización propia -->
+    <div style="border:2px dashed #2a78d6;border-radius:12px;padding:18px;margin-bottom:20px;background:#f0f6ff">
+      <div style="font-size:15px;font-weight:700;color:#1a3a5c;margin-bottom:4px">📎 ¿Tiene su propia cotización?</div>
+      <div style="font-size:13px;color:#555;margin-bottom:12px">Adjunte directamente su PDF o imagen (captura de WhatsApp, foto, etc.) — no es necesario completar el formulario.</div>
+      <input type="text" id="adj-nombre" placeholder="Su nombre / empresa *" style="width:100%;padding:8px 12px;border:1px solid #c0d0e0;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:8px" />
+      <input type="tel" id="adj-tel" placeholder="Teléfono de contacto *" style="width:100%;padding:8px 12px;border:1px solid #c0d0e0;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:10px" />
+      <label id="adj-label" style="display:inline-block;padding:9px 20px;background:#2a78d6;color:#fff;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+        📂 Seleccionar archivo
+        <input type="file" id="adj-file" accept="image/*,.pdf" style="display:none" onchange="adjPreview()" />
+      </label>
+      <span id="adj-filename" style="font-size:13px;color:#555;margin-left:10px"></span>
+      <img id="adj-preview" style="display:none;margin-top:10px;max-width:100%;max-height:160px;object-fit:contain;border-radius:8px;border:1px solid #dde" />
+      <div style="margin-top:12px">
+        <button onclick="enviarAdjunto()" style="padding:10px 24px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">✅ Enviar cotización adjunta</button>
+      </div>
+      <div id="adj-msg" style="margin-top:10px;font-size:13px;font-weight:600"></div>
+    </div>
+    <div style="text-align:center;color:#aaa;font-size:13px;margin-bottom:16px">— o complete el formulario a continuación —</div>
     <div class="info-box">Complete los precios y condiciones, luego presione <strong>Enviar cotización</strong>.</div>
 
     <label>Nombre / Empresa</label>
@@ -164,8 +182,67 @@
 <script>
 const CORREO_JUNTA = 'ferdama27@gmail.com';
 const WHATSAPP_JUNTA = '584140213991';
+const BACKEND = 'https://cnviejo2-production-46d5.up.railway.app';
 let itemCount = 0;
 let itemsData = []; // para pasar de contratista a proveedor vía URL
+
+function adjPreview() {
+  const file = document.getElementById('adj-file').files[0];
+  if (!file) return;
+  document.getElementById('adj-filename').textContent = file.name;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const prev = document.getElementById('adj-preview');
+  if (['jpg','jpeg','png','gif','webp','heic'].includes(ext)) {
+    prev.src = URL.createObjectURL(file);
+    prev.style.display = 'block';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
+async function enviarAdjunto() {
+  const nombre = document.getElementById('adj-nombre').value.trim();
+  const tel = document.getElementById('adj-tel').value.trim();
+  const file = document.getElementById('adj-file').files[0];
+  const msg = document.getElementById('adj-msg');
+  if (!nombre) { msg.style.color='#c00'; msg.textContent='⚠ Ingrese su nombre o empresa.'; return; }
+  if (!tel) { msg.style.color='#c00'; msg.textContent='⚠ Ingrese su teléfono.'; return; }
+  if (!file) { msg.style.color='#c00'; msg.textContent='⚠ Seleccione un archivo.'; return; }
+
+  // Obtener el ID de la solicitud desde la URL (?ref=XXXXXX)
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if (!ref) { msg.style.color='#c00'; msg.textContent='⚠ No se encontró referencia de solicitud en el enlace.'; return; }
+
+  msg.style.color='#555'; msg.textContent='Enviando...';
+
+  try {
+    // Primero crear el registro de cotización con nombre y teléfono
+    const obra = params.get('obra') || '';
+    const bodyJson = { obra, proveedor_nombre: nombre.toUpperCase(), proveedor_telefono: tel, nro_solicitud: ref, items: [] };
+    const rCot = await fetch(BACKEND + '/api/solicitudes-insumos/', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyJson)
+    });
+    if (!rCot.ok) throw new Error('Error al registrar');
+    const cot = await rCot.json();
+
+    // Luego subir el adjunto
+    const fd = new FormData();
+    fd.append('file', file);
+    const rAdj = await fetch(BACKEND + '/api/solicitudes-insumos/' + cot.id + '/adjunto-cotizacion', {
+      method: 'POST', body: fd
+    });
+    if (!rAdj.ok) throw new Error('Error al subir archivo');
+
+    msg.style.color='#16a34a';
+    msg.textContent='✅ ¡Cotización enviada correctamente! Gracias.';
+    document.getElementById('adj-label').style.pointerEvents = 'none';
+    document.querySelector('[onclick="enviarAdjunto()"]').disabled = true;
+  } catch(e) {
+    msg.style.color='#c00'; msg.textContent='❌ Error: ' + e.message;
+  }
+}
 
 function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
