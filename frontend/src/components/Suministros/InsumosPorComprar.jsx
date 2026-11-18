@@ -3,6 +3,14 @@ import API from '../../api';
 import UnidadCombo from './UnidadCombo';
 import { UNIDADES } from './SuministroForm';
 
+const CATEGORIAS = [
+  'Químicos de piscina', 'Equipos de piscina', 'Jardinería y áreas verdes',
+  'Electricidad', 'Plomería / Fontanería', 'Planta eléctrica',
+  'Seguridad / Vigilancia', 'Pintura e impermeabilización',
+  'Ferretería y materiales', 'Limpieza', 'Aire acondicionado',
+  'Informática y tecnología', 'Otro',
+];
+
 const ESTADOS = ['Pendiente', 'Comprado', 'Donado'];
 const ESTADO_COLOR = {
   Pendiente: { bg: '#fff3cd', color: '#856404' },
@@ -17,9 +25,10 @@ export default function InsumosPorComprar() {
   const [buscar, setBuscar] = useState('');
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ nombre: '', cantidad: '', unidad: '', nota: '', estado: 'Pendiente' });
+  const [form, setForm] = useState({ nombre: '', cantidad: '', unidad: '', nota: '', estado: 'Pendiente', categoria: '' });
   const [guardando, setGuardando] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState(null);
+  const [catalogo, setCatalogo] = useState([]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -33,15 +42,19 @@ export default function InsumosPorComprar() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  useEffect(() => {
+    API.get('/catalogo-insumos/').then(({ data }) => setCatalogo(data)).catch(() => {});
+  }, []);
+
   const abrirNuevo = () => {
     setEditando(null);
-    setForm({ nombre: '', cantidad: '', unidad: '', nota: '', estado: 'Pendiente' });
+    setForm({ nombre: '', cantidad: '', unidad: '', nota: '', estado: 'Pendiente', categoria: '' });
     setMostrarForm(true);
   };
 
   const abrirEditar = (item) => {
     setEditando(item);
-    setForm({ nombre: item.nombre, cantidad: item.cantidad, unidad: item.unidad || '', nota: item.nota || '', estado: item.estado });
+    setForm({ nombre: item.nombre, cantidad: item.cantidad, unidad: item.unidad || '', nota: item.nota || '', estado: item.estado, categoria: item.categoria || '' });
     setMostrarForm(true);
   };
 
@@ -50,11 +63,32 @@ export default function InsumosPorComprar() {
     if (!form.cantidad || isNaN(form.cantidad) || parseFloat(form.cantidad) <= 0) return;
     setGuardando(true);
     try {
-      const payload = { ...form, nombre: form.nombre.toUpperCase(), cantidad: parseFloat(form.cantidad) };
+      const nombreUpper = form.nombre.trim().toUpperCase();
+      const payload = { ...form, nombre: nombreUpper, cantidad: parseFloat(form.cantidad) };
       if (editando) {
         await API.put(`/pedidos-suministros/${editando.id}`, payload);
       } else {
         await API.post('/pedidos-suministros/', payload);
+      }
+      // Si tiene categoría y el nombre no existe en el catálogo, crearlo automáticamente
+      if (form.categoria && !editando) {
+        const existe = catalogo.some(c => c.nombre.toUpperCase() === nombreUpper);
+        if (!existe) {
+          try {
+            await API.post('/catalogo-insumos/', {
+              nombre: nombreUpper,
+              categoria: form.categoria,
+              unidad: form.unidad || null,
+              marca: null,
+              proveedor_habitual: null,
+              ultimo_precio: null,
+              notas: null,
+            });
+            // Refresca catálogo local
+            const { data } = await API.get('/catalogo-insumos/');
+            setCatalogo(data);
+          } catch { /* silencioso — no bloquea el pedido */ }
+        }
       }
       setMostrarForm(false);
       cargar();
@@ -205,7 +239,35 @@ export default function InsumosPorComprar() {
             </h2>
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>Insumo / Material *</label>
-              <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} style={inp} placeholder="Ej: CEMENTO PORTLAND" />
+              <input
+                value={form.nombre}
+                onChange={e => {
+                  const val = e.target.value;
+                  const cat = catalogo.find(c => c.nombre.toUpperCase() === val.toUpperCase());
+                  setForm(f => ({
+                    ...f,
+                    nombre: val,
+                    unidad: cat && !f.unidad ? (cat.unidad || f.unidad) : f.unidad,
+                    categoria: cat && !f.categoria ? (cat.categoria || f.categoria) : f.categoria,
+                  }));
+                }}
+                list="lista-catalogo-insumos"
+                style={inp}
+                placeholder="Escribe o elige del catálogo"
+                autoComplete="off"
+              />
+              <datalist id="lista-catalogo-insumos">
+                {catalogo.map(c => (
+                  <option key={c.id} value={c.nombre} label={`[${c.codigo}] ${c.categoria}`} />
+                ))}
+              </datalist>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={lbl}>Categoría *</label>
+              <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={inp}>
+                <option value="">— Seleccionar —</option>
+                {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
               <div>
