@@ -262,7 +262,7 @@ export default function CotizacionesInsumos() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: '#1a3a5c', color: '#fff' }}>
-                        <th style={{ ...thS, color: '#fff', borderBottom: 'none', background: 'transparent' }}>Descripción del producto</th>
+                        <th style={{ ...thS, color: '#fff', borderBottom: 'none', background: 'transparent' }}>Producto solicitado</th>
                         {comparador.data.proveedores.map((p, i) => (
                           <th key={i} style={{ ...thS, color: '#fff', borderBottom: 'none', background: 'transparent', textAlign: 'center' }}>
                             {p || 'Proveedor ' + (i + 1)}
@@ -295,9 +295,6 @@ export default function CotizacionesInsumos() {
                                       <div style={{ fontWeight: 700, fontSize: 14, color: esMejor ? '#1a7a3c' : '#333' }}>
                                         ${oferta.precio_usd.toFixed(2)}
                                         {esMejor && <span style={{ marginLeft: 4, fontSize: 11 }}>&#x2714;</span>}
-                                      </div>
-                                      <div style={{ fontSize: 11, color: '#555', marginTop: 3, fontStyle: 'italic' }}>
-                                        Solicitado: {oferta.descripcion}
                                       </div>
                                       {oferta.alternativa && (
                                         <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Ofrecido: {oferta.alternativa}</div>
