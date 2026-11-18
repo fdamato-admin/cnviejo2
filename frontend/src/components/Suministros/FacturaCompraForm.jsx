@@ -21,6 +21,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
   const [ivaD, setIvaD] = useState(16);
   const [proveedores, setProveedores] = useState([]);
   const [suministrosLista, setSuministrosLista] = useState([]);
+  const [catalogoLista, setCatalogoLista] = useState([]);
   const [form, setForm] = useState({
     fecha_compra: new Date().toISOString().slice(0,10),
     tipo_documento:'Factura', documento_otro:'', numero_documento:'', proveedor:'',
@@ -41,6 +42,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
     }).catch(()=>{});
     API.get('/proveedores/').then(r => setProveedores(r.data || [])).catch(()=>{});
     API.get('/suministros/').then(r => setSuministrosLista(r.data || [])).catch(()=>{});
+    API.get('/catalogo-insumos/').then(r => setCatalogoLista(r.data || [])).catch(()=>{});
   }, []);
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -49,6 +51,17 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
     n[idx]={...n[idx],[k]:v};
     if(k==='aplica_iva'&&!v) n[idx].iva_porcentaje='0';
     if(k==='aplica_iva'&&v) n[idx].iva_porcentaje=String(ivaD);
+    // Al cambiar el nombre, buscar en catálogo y pre-rellenar categoría y unidad
+    if(k==='nombre') {
+      const nombreUp = v.trim().toUpperCase();
+      const enCat = catalogoLista.find(c => c.nombre.toUpperCase() === nombreUp);
+      const enSum = suministrosLista.find(s => (s.nombre||'').toUpperCase() === nombreUp);
+      const fuente = enCat || enSum;
+      if(fuente) {
+        if(!n[idx].categoria && fuente.categoria) n[idx].categoria = fuente.categoria;
+        if(!n[idx].unidad && fuente.unidad) n[idx].unidad = fuente.unidad;
+      }
+    }
     return n;
   });
 
@@ -142,7 +155,13 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                 return (
                   <tr key={i} style={{ background:i%2===0?'#fff':'#f8fafc', borderBottom:'1px solid #eee' }}>
                     <td style={tdS}>{i+1}</td>
-                    <td style={tdS}><input list="sl" value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo"/><datalist id="sl">{suministrosLista.map(s=><option key={s.id} value={s.nombre}/>)}</datalist></td>
+                    <td style={tdS}>
+                      <input list={`sl-${i}`} value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo" autoComplete="off"/>
+                      <datalist id={`sl-${i}`}>
+                        {catalogoLista.map(c=><option key={`cat-${c.id}`} value={c.nombre} label={`[${c.codigo}] ${c.categoria}`}/>)}
+                        {suministrosLista.filter(s=>!catalogoLista.some(c=>c.nombre.toUpperCase()===(s.nombre||'').toUpperCase())).map(s=><option key={`sum-${s.id}`} value={s.nombre}/>)}
+                      </datalist>
+                    </td>
                     <td style={tdS}><select value={it.categoria} onChange={e=>setItem(i,'categoria',e.target.value)} style={iS}><option value="">Seleccionar...</option>{CATEGORIAS.map(cat=><option key={cat}>{cat}</option>)}</select></td>
                     <td style={tdS}><input list="ul" value={it.unidad} onChange={e=>setItem(i,'unidad',e.target.value.toUpperCase())} style={{...iS,width:70}} placeholder="UND"/><datalist id="ul">{UNIDADES.map(u=><option key={u} value={u}/>)}</datalist></td>
                     <td style={tdS}><input type="number" min="0" step="0.01" value={it.cantidad} onChange={e=>setItem(i,'cantidad',e.target.value)} style={{...iS,minWidth:80}}/></td>
