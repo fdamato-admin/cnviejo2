@@ -6,6 +6,52 @@ const DOCUMENTOS = ['Nota de Entrega','Factura','Otro'];
 const MONEDAS = ['Dolares','Bs','Euros','USDT'];
 const UNIDADES = ['UND','KG','LT','MT','M2','M3','GLN','CAJA','BOLSA','ROLLO','PAR','JGO','SRV','HRS'];
 
+const norm = s => (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
+function ArticuloCombo({ value, onChange, opciones, estilo }) {
+  const [abierto, setAbierto] = useState(false);
+  const [q, setQ] = useState('');
+  const nq = norm(q);
+  const lista = nq
+    ? opciones.filter(o => norm(o.nombre).includes(nq) || norm(o.codigo||'').includes(nq))
+    : opciones;
+
+  const elegir = (o) => { onChange(o.nombre, o); setQ(''); setAbierto(false); };
+
+  return (
+    <div style={{ position:'relative' }}>
+      <input
+        value={abierto ? q : (value||'')}
+        placeholder={abierto ? (value||'Buscar artículo...') : 'Buscar artículo...'}
+        onFocus={() => { setQ(''); setAbierto(true); }}
+        onChange={e => setQ(e.target.value.toUpperCase())}
+        onBlur={() => setTimeout(() => setAbierto(false), 150)}
+        autoComplete="off"
+        style={estilo}
+      />
+      {abierto && lista.length > 0 && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:30, marginTop:2,
+          background:'#fff', border:'1px solid #ddd', borderRadius:8, maxHeight:220, overflowY:'auto',
+          boxShadow:'0 4px 14px rgba(0,0,0,0.15)' }}>
+          {lista.map(o => (
+            <div key={o.id||o.nombre}
+              onMouseDown={e => { e.preventDefault(); elegir(o); }}
+              style={{ padding:'7px 12px', fontSize:13, cursor:'pointer',
+                background: o.nombre===value ? '#e8f0fe':'#fff',
+                borderBottom:'1px solid #f0f0f0' }}
+              onMouseEnter={e => e.currentTarget.style.background='#f0f5ff'}
+              onMouseLeave={e => e.currentTarget.style.background=o.nombre===value?'#e8f0fe':'#fff'}>
+              <span style={{ fontWeight:600 }}>{o.nombre}</span>
+              {o.codigo && <span style={{ marginLeft:8, fontSize:11, color:'#888', fontFamily:'monospace' }}>[{o.codigo}]</span>}
+              {o.categoria && <span style={{ marginLeft:6, fontSize:11, color:'#aaa' }}>{o.categoria}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function iV(pct) {
   return { nombre:'', categoria:'', unidad:'', cantidad:'1', precio_unitario:'', aplica_iva:true, iva_porcentaje:String(pct||16), moneda_pago:'Dolares' };
 }
@@ -156,11 +202,23 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                   <tr key={i} style={{ background:i%2===0?'#fff':'#f8fafc', borderBottom:'1px solid #eee' }}>
                     <td style={tdS}>{i+1}</td>
                     <td style={tdS}>
-                      <input list={`sl-${i}`} value={it.nombre} onChange={e=>setItem(i,'nombre',e.target.value.toUpperCase())} style={iS} placeholder="Articulo" autoComplete="off"/>
-                      <datalist id={`sl-${i}`}>
-                        {catalogoLista.map(c=><option key={`cat-${c.id}`} value={c.nombre} label={`[${c.codigo}] ${c.categoria}`}/>)}
-                        {suministrosLista.filter(s=>!catalogoLista.some(c=>c.nombre.toUpperCase()===(s.nombre||'').toUpperCase())).map(s=><option key={`sum-${s.id}`} value={s.nombre}/>)}
-                      </datalist>
+                      <ArticuloCombo
+                        value={it.nombre}
+                        onChange={(nombre, o) => {
+                          setItems(arr => {
+                            const n=[...arr];
+                            n[i]={...n[i], nombre};
+                            if(o.categoria && !n[i].categoria) n[i].categoria = o.categoria;
+                            if(o.unidad && !n[i].unidad) n[i].unidad = o.unidad;
+                            return n;
+                          });
+                        }}
+                        opciones={[
+                          ...catalogoLista,
+                          ...suministrosLista.filter(s=>!catalogoLista.some(c=>c.nombre.toUpperCase()===(s.nombre||'').toUpperCase()))
+                        ]}
+                        estilo={iS}
+                      />
                     </td>
                     <td style={tdS}><select value={it.categoria} onChange={e=>setItem(i,'categoria',e.target.value)} style={iS}><option value="">Seleccionar...</option>{CATEGORIAS.map(cat=><option key={cat}>{cat}</option>)}</select></td>
                     <td style={tdS}><input list="ul" value={it.unidad} onChange={e=>setItem(i,'unidad',e.target.value.toUpperCase())} style={{...iS,width:70}} placeholder="UND"/><datalist id="ul">{UNIDADES.map(u=><option key={u} value={u}/>)}</datalist></td>
