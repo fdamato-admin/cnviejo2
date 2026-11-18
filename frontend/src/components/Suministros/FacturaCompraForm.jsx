@@ -11,6 +11,9 @@ const norm = s => (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
 function ArticuloCombo({ value, onChange, opciones, estilo }) {
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState('');
+  const [pos, setPos] = useState({ top:0, left:0, width:200 });
+  const refInput = React.useRef(null);
+
   const nq = norm(q);
   const lista = nq
     ? opciones.filter(o => norm(o.nombre).includes(nq) || norm(o.codigo||'').includes(nq))
@@ -18,21 +21,31 @@ function ArticuloCombo({ value, onChange, opciones, estilo }) {
 
   const elegir = (o) => { onChange(o.nombre, o); setQ(''); setAbierto(false); };
 
+  const abrirCombo = () => {
+    if (refInput.current) {
+      const r = refInput.current.getBoundingClientRect();
+      setPos({ top: r.bottom + window.scrollY, left: r.left + window.scrollX, width: Math.max(r.width, 240) });
+    }
+    setQ('');
+    setAbierto(true);
+  };
+
   return (
     <div style={{ position:'relative' }}>
       <input
+        ref={refInput}
         value={abierto ? q : (value||'')}
-        placeholder={abierto ? (value||'Buscar artículo...') : 'Buscar artículo...'}
-        onFocus={() => { setQ(''); setAbierto(true); }}
+        placeholder="Buscar artículo..."
+        onFocus={abrirCombo}
         onChange={e => setQ(e.target.value.toUpperCase())}
-        onBlur={() => setTimeout(() => setAbierto(false), 150)}
+        onBlur={() => setTimeout(() => setAbierto(false), 200)}
         autoComplete="off"
         style={estilo}
       />
       {abierto && lista.length > 0 && (
-        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:30, marginTop:2,
-          background:'#fff', border:'1px solid #ddd', borderRadius:8, maxHeight:220, overflowY:'auto',
-          boxShadow:'0 4px 14px rgba(0,0,0,0.15)' }}>
+        <div style={{ position:'fixed', top: pos.top + 2, left: pos.left, width: pos.width,
+          zIndex:9999, background:'#fff', border:'1px solid #ddd', borderRadius:8,
+          maxHeight:220, overflowY:'auto', boxShadow:'0 4px 14px rgba(0,0,0,0.2)' }}>
           {lista.map(o => (
             <div key={o.id||o.nombre}
               onMouseDown={e => { e.preventDefault(); elegir(o); }}
@@ -68,6 +81,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
   const [proveedores, setProveedores] = useState([]);
   const [suministrosLista, setSuministrosLista] = useState([]);
   const [catalogoLista, setCatalogoLista] = useState([]);
+  const [pedidosLista, setPedidosLista] = useState([]);
   const [form, setForm] = useState({
     fecha_compra: new Date().toISOString().slice(0,10),
     tipo_documento:'Factura', documento_otro:'', numero_documento:'', proveedor:'',
@@ -89,6 +103,7 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
     API.get('/proveedores/').then(r => setProveedores(r.data || [])).catch(()=>{});
     API.get('/suministros/').then(r => setSuministrosLista(r.data || [])).catch(()=>{});
     API.get('/catalogo-insumos/').then(r => setCatalogoLista(r.data || [])).catch(()=>{});
+    API.get('/pedidos-suministros/').then(r => setPedidosLista(r.data || [])).catch(()=>{});
   }, []);
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -102,7 +117,8 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
       const nombreUp = v.trim().toUpperCase();
       const enCat = catalogoLista.find(c => c.nombre.toUpperCase() === nombreUp);
       const enSum = suministrosLista.find(s => (s.nombre||'').toUpperCase() === nombreUp);
-      const fuente = enCat || enSum;
+      const enPed = pedidosLista.find(p => (p.nombre||'').toUpperCase() === nombreUp);
+      const fuente = enCat || enSum || enPed;
       if(fuente) {
         if(!n[idx].categoria && fuente.categoria) n[idx].categoria = fuente.categoria;
         if(!n[idx].unidad && fuente.unidad) n[idx].unidad = fuente.unidad;
@@ -213,10 +229,19 @@ export default function FacturaCompraForm({ onClose, onGuardado }) {
                             return n;
                           });
                         }}
-                        opciones={[
-                          ...catalogoLista,
-                          ...suministrosLista.filter(s=>!catalogoLista.some(c=>c.nombre.toUpperCase()===(s.nombre||'').toUpperCase()))
-                        ]}
+                        opciones={(() => {
+                          const vistos = new Set();
+                          const result = [];
+                          for (const o of [
+                            ...catalogoLista,
+                            ...suministrosLista,
+                            ...pedidosLista,
+                          ]) {
+                            const k = (o.nombre||'').toUpperCase();
+                            if (k && !vistos.has(k)) { vistos.add(k); result.push(o); }
+                          }
+                          return result;
+                        })()}
                         estilo={iS}
                       />
                     </td>
