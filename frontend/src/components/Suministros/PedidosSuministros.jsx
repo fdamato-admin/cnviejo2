@@ -4,7 +4,7 @@ import { UNIDADES } from './SuministroForm';
 import UnidadCombo from './UnidadCombo';
 
 const BACKEND = 'https://cnviejo2-production-46d5.up.railway.app';
-const thS = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', fontSize: 13, position: 'sticky', top: 0, background: '#f5f7fa', zIndex: 1 };
+const thS = { padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#1a3a5c', borderBottom: '2px solid #c5d8f7', whiteSpace: 'nowrap', fontSize: 13, position: 'sticky', top: 0, background: '#e8f0fe', zIndex: 1 };
 const tdS = { padding: '10px 14px', verticalAlign: 'middle' };
 const inp = { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
 

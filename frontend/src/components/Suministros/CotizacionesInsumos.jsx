@@ -169,7 +169,7 @@ export default function CotizacionesInsumos() {
             <thead>
               <tr style={{ background: '#f5f7fa' }}>
                 {['Nro. Sol.', 'Fecha', 'Proveedor', 'Telefono', 'Obra', 'Subtotal USD', 'IVA', 'Total USD', 'Estado', ''].map(h => (
-                  <th key={h || 'acc'} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', position: 'sticky', top: 0, background: '#f5f7fa', zIndex: 1 }}>{h}</th>
+                  <th key={h || 'acc'} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#1a3a5c', borderBottom: '2px solid #c5d8f7', whiteSpace: 'nowrap', position: 'sticky', top: 0, background: '#e8f0fe', zIndex: 1 }}>{h}</th>
                 ))}
               </tr>
             </thead>

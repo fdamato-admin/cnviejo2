@@ -46,7 +46,7 @@ export default function ProveedoresList() {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: '#1a1a1a' }}>Base de Proveedores</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: '#1a1a1a' }}>Listado de Proveedores</h1>
           <p style={{ margin: '4px 0 0', color: '#666', fontSize: 14 }}>CN Pueblo Viejo 2 · Gestión</p>
         </div>
         <button
@@ -99,7 +99,7 @@ export default function ProveedoresList() {
             <thead>
               <tr style={{ background: '#f8f8f8', borderBottom: '1px solid #e8e8e8' }}>
                 {['Nombre / Empresa', 'Categoría', 'Tipo', 'Teléfono', 'Referido por', 'Estado', ''].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, color: '#555', fontSize: 13, position: 'sticky', top: 0, background: '#f8f8f8', zIndex: 1 }}>{h}</th>
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#1a3a5c', fontSize: 13, position: 'sticky', top: 0, background: '#e8f0fe', zIndex: 1, borderBottom: '2px solid #c5d8f7' }}>{h}</th>
                 ))}
               </tr>
             </thead>

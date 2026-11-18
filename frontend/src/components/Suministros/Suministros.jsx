@@ -222,7 +222,7 @@ function Compras({ pedido, onPedidoUsado }) {
                   <th key={h.t || 'acciones'}
                     onClick={h.k ? () => cambiarOrden(h.k) : undefined}
                     title={h.k ? 'Clic para ordenar' : undefined}
-                    style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#444', borderBottom: '2px solid #e8e8e8', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none', position: 'sticky', top: 0, background: '#f5f7fa', zIndex: 1 }}>
+                    style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#1a3a5c', borderBottom: '2px solid #c5d8f7', whiteSpace: 'nowrap', cursor: h.k ? 'pointer' : 'default', userSelect: 'none', position: 'sticky', top: 0, background: '#e8f0fe', zIndex: 1 }}>
                     {h.t}{h.k && orden.campo === h.k ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : (h.k ? ' ↕' : '')}
                   </th>
                 ))}
