@@ -4,7 +4,6 @@ import SuministroForm from './SuministroForm';
 import PedidosSuministros from './PedidosSuministros';
 import ImpactoRecibo from './ImpactoRecibo';
 import CotizacionesInsumos from './CotizacionesInsumos';
-import SolicitudesInsumos from './SolicitudesInsumos';
 import FacturaCompraForm from './FacturaCompraForm';
 
 const CATEGORIAS = [
@@ -66,7 +65,6 @@ export default function Suministros() {
     <div>
       <div style={{ display: 'flex', gap: 4, padding: '0 32px', borderBottom: '1px solid #eee', maxWidth: 1300, margin: '0 auto' }}>
         {pestana('pedidos', 'Pedido de Suministros')}
-        {pestana('solicitudes', 'Solicitudes')}
         {pestana('cotizaciones', 'Cotizaciones Recibidas')}
         {pestana('compras', 'Compras')}
         {pestana('impacto', 'Impacto Gastos en el Recibo')}
@@ -74,7 +72,6 @@ export default function Suministros() {
       {vista === 'compras' && <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />}
       {vista === 'pedidos' && <PedidosSuministros onComprar={comprarPedido} />}
       {vista === 'impacto' && <ImpactoRecibo />}
-      {vista === 'solicitudes' && <SolicitudesInsumos />}
       {vista === 'cotizaciones' && <CotizacionesInsumos />}
     </div>
   );
