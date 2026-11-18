@@ -94,12 +94,12 @@ export default function ProveedoresList() {
 
       {/* Tabla */}
       {!cargando && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e8e8e8', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e8e8e8', overflow: 'hidden', maxHeight: '60vh', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f8f8f8', borderBottom: '1px solid #e8e8e8' }}>
                 {['Nombre / Empresa', 'Categoría', 'Tipo', 'Teléfono', 'Referido por', 'Estado', ''].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, color: '#555', fontSize: 13 }}>{h}</th>
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, color: '#555', fontSize: 13, position: 'sticky', top: 0, background: '#f8f8f8', zIndex: 1 }}>{h}</th>
                 ))}
               </tr>
             </thead>
