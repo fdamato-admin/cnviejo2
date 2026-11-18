@@ -10,7 +10,7 @@ import Auditoria from './components/Auditoria/Auditoria';
 import Caja from './components/Caja/Caja';
 
 const TABS = [
-  { key: 'trabajos', label: 'Trabajos', modulo: 'trabajos' },
+  { key: 'trabajos', label: 'Mantenimiento', modulo: 'trabajos' },
   { key: 'proveedores', label: 'Proveedores', modulo: 'proveedores' },
   { key: 'suministros', label: 'Suministros', modulo: 'suministros' },
 ];

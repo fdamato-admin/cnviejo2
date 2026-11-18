@@ -244,14 +244,20 @@ export default function TrabajoDetalle({ trabajo: trabajoInicial, onClose, onCam
                       </div>
                     </div>
                     {cot.descripcion && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#555' }}>{cot.descripcion}</p>}
-                    {cot.documento_url && <a href={cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>Ver documento adjunto</a>}
+                    {cot.documento_url && (() => {
+                      const ext = cot.documento_url.split('.').pop().toLowerCase();
+                      const esImagen = ['jpg','jpeg','png','gif','webp','heic'].includes(ext);
+                      return esImagen
+                        ? <img src={cot.documento_url} alt="Cotización adjunta" onClick={() => setVistaPrevia({ url: cot.documento_url, tipo: 'imagen' })} style={{ display: 'block', marginTop: 10, maxWidth: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, cursor: 'pointer', border: '1px solid #e0e0e0' }} />
+                        : <a href={cot.documento_url} target='_blank' rel='noreferrer' style={{ display: 'inline-block', margin: '8px 0 0', fontSize: 12, color: '#2a78d6' }}>📄 Ver documento adjunto</a>;
+                    })()}
                     <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                       {cot.estado !== 'aprobada' && cot.estado !== 'rechazada' && <button onClick={() => aprobarCotizacion(cot)} style={{ padding: '5px 14px', background: '#198754', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Aprobar</button>}
                       <button onClick={() => { setCotEditar(cot); setMostrarForm(true); }} style={{ padding: '5px 14px', background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Editar</button>
                       <button onClick={() => eliminarCotizacion(cot.id)} style={{ padding: '5px 14px', background: '#fff0f0', color: '#c00', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
                       <label style={{ padding: '5px 14px', background: '#f0f4ff', color: '#2a4a8a', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
-                        {subiendoDoc[cot.id] ? 'Subiendo...' : 'Adjuntar doc'}
-                        <input type='file' accept='.pdf,.doc,.docx,.xls,.xlsx' style={{ display: 'none' }} onChange={e => handleSubirDocumento(cot.id, e.target.files[0])} />
+                        {subiendoDoc[cot.id] ? 'Subiendo...' : '📎 Adjuntar cotización'}
+                        <input type='file' accept='.pdf,.doc,.docx,.xls,.xlsx,image/*' style={{ display: 'none' }} onChange={e => handleSubirDocumento(cot.id, e.target.files[0])} />
                       </label>
                     </div>
                   </div>

@@ -44,7 +44,7 @@ export default function Trabajos() {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Trabajos</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Trabajos / Mantenimiento</h1>
           <p style={{ margin: '4px 0 0', color: '#888', fontSize: 14 }}>Gestión de trabajos y cotizaciones</p>
         </div>
         <button onClick={() => { setTrabajoEditar(null); setMostrarForm(true); }}
