@@ -318,10 +318,7 @@ export default function PedidosSuministros({ onComprar }) {
       {cargando ? (
         <p style={{ color: '#888', textAlign: 'center', padding: 40 }}>Cargando...</p>
       ) : pedidos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-          <p style={{ fontSize: 16 }}>No hay suministros en el pedido</p>
-          <p style={{ fontSize: 13, marginTop: 8 }}>Presiona "Agregar al pedido" para cargar lo que se necesita</p>
-        </div>
+        <div style={{ padding: '20px 0' }} />
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
