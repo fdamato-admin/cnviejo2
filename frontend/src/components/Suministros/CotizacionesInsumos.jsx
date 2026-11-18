@@ -372,7 +372,7 @@ export default function CotizacionesInsumos() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#f5f7fa' }}>
-                    {['&#x2713;', '#', 'Descripcion', 'Cant.', 'Unidad', 'Alternativa', 'Precio/u USD', 'Subtotal USD'].map(h => (
+                    {['&#x2713;', '#', 'Producto solicitado', 'Cant.', 'Unidad', 'Producto ofrecido', 'Precio/u USD', 'Precio/u Bs.', 'Subtotal USD', 'Subtotal Bs.'].map(h => (
                       <th key={h} style={thS} dangerouslySetInnerHTML={{ __html: h }} />
                     ))}
                   </tr>
@@ -390,7 +390,9 @@ export default function CotizacionesInsumos() {
                         <td style={tdS}>{it.unidad || '—'}</td>
                         <td style={{ ...tdS, color: '#666' }}>{it.alternativa || '—'}</td>
                         <td style={{ ...tdS, fontWeight: 600 }}>{fmt(it.precio_usd)}</td>
+                        <td style={{ ...tdS, color: '#555' }}>{it.tasa_bs && it.precio_usd ? 'Bs. ' + (it.precio_usd * it.tasa_bs).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
                         <td style={{ ...tdS, fontWeight: 700, color: '#1a7a3c' }}>{fmt(it.subtotal_usd)}</td>
+                        <td style={{ ...tdS, color: '#555' }}>{it.tasa_bs && it.subtotal_usd ? 'Bs. ' + (it.subtotal_usd * it.tasa_bs).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
                       </tr>
                     );
                   })}
@@ -399,16 +401,32 @@ export default function CotizacionesInsumos() {
             </div>
 
             <div style={{ textAlign: 'right', background: '#1a3a5c', color: '#fff', borderRadius: 10, padding: '14px 20px', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, opacity: 0.8 }}>Subtotal USD</div>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{fmt(detalle.subtotal_usd)}</div>
-              {detalle.iva_usd > 0 && (
-                <>
-                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>IVA 16%</div>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>{fmt(detalle.iva_usd)}</div>
-                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>TOTAL CON IVA</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{fmt(detalle.total_usd)}</div>
-                </>
-              )}
+              {(() => {
+                const tasa = detalle.items && detalle.items.length > 0
+                  ? detalle.items.find(it => it.tasa_bs > 0)?.tasa_bs || null
+                  : null;
+                const subBS = tasa && detalle.subtotal_usd ? detalle.subtotal_usd * tasa : null;
+                const ivaBS = tasa && detalle.iva_usd ? detalle.iva_usd * tasa : null;
+                const totalBS = tasa && detalle.total_usd ? detalle.total_usd * tasa : null;
+                return (
+                  <>
+                    {tasa && <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>Tasa: {tasa} Bs./USD</div>}
+                    <div style={{ fontSize: 13, opacity: 0.8 }}>Subtotal USD</div>
+                    <div style={{ fontSize: 20, fontWeight: 700 }}>{fmt(detalle.subtotal_usd)}</div>
+                    {subBS && <div style={{ fontSize: 13, opacity: 0.75 }}>Bs. {subBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>}
+                    {detalle.iva_usd > 0 && (
+                      <>
+                        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>IVA 16%</div>
+                        <div style={{ fontSize: 15, fontWeight: 600 }}>{fmt(detalle.iva_usd)}</div>
+                        {ivaBS && <div style={{ fontSize: 13, opacity: 0.75 }}>Bs. {ivaBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>}
+                        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>TOTAL CON IVA</div>
+                        <div style={{ fontSize: 22, fontWeight: 700 }}>{fmt(detalle.total_usd)}</div>
+                        {totalBS && <div style={{ fontSize: 14, opacity: 0.85 }}>Bs. {totalBS.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {aviso && (
