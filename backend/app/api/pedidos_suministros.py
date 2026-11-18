@@ -5,6 +5,7 @@ from typing import List, Optional
 from ..database import get_db
 from ..models import PedidoSuministro
 from ..schemas import PedidoSuministroCreate, PedidoSuministroUpdate, PedidoSuministroOut
+from .catalogo_insumos import _sync_catalogo
 
 router = APIRouter(prefix="/pedidos-suministros", tags=["Pedidos de suministros"])
 
@@ -27,6 +28,8 @@ def crear_pedido(data: PedidoSuministroCreate, db: Session = Depends(get_db)):
     if not p.estado:
         p.estado = "Pendiente"
     db.add(p)
+    db.flush()
+    _sync_catalogo(db, p.nombre, getattr(p, 'categoria', None), getattr(p, 'unidad', None))
     db.commit()
     db.refresh(p)
     return p

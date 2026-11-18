@@ -8,6 +8,7 @@ from ..models import Suministro, Configuracion, CompraSuministro, Usuario
 from ..schemas import SuministroCreate, SuministroUpdate, SuministroOut
 from ..auth import get_current_user
 from .auditoria import registrar
+from .catalogo_insumos import _sync_catalogo
 
 router = APIRouter(prefix="/suministros", tags=["Suministros"])
 
@@ -67,6 +68,8 @@ def crear_suministro(data: SuministroCreate, db: Session = Depends(get_db), usua
     db.add(s)
     db.flush()
     _registrar_compra(db, s)
+    _sync_catalogo(db, s.nombre, s.categoria, s.unidad, s.proveedor,
+                   s.ultimo_precio, s.ultima_fecha_compra)
     registrar(db, usuario, "crear", "suministro", s.id, f"Nombre: {s.nombre}")
     db.commit()
     db.refresh(s)
@@ -262,6 +265,9 @@ def ingresar_factura(data: _FacturaIn, db: Session = Depends(get_db), usuario: U
 
         db.flush()
         _registrar_compra(db, s)
+        _sync_catalogo(db, s.nombre, s.categoria, s.unidad,
+                       (data.proveedor or "").strip().upper() or None,
+                       precio if precio else None, fecha)
         resultado.append({"nombre": s.nombre, "id": s.id})
 
     registrar(db, usuario, "factura", "suministro", None, f"{len(resultado)} items - Proveedor: {data.proveedor or chr(45)}")

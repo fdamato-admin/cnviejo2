@@ -67,6 +67,40 @@ class CatalogoInsumoOut(BaseModel):
         json_encoders = {object: str}
 
 
+def _sync_catalogo(db: Session, nombre: str, categoria: str = None,
+                   unidad: str = None, proveedor: str = None, precio: float = None,
+                   fecha_compra=None):
+    """Auto-agrega al catálogo si el producto no existe. Actualiza precio/fecha si ya existe."""
+    if not nombre or not nombre.strip():
+        return
+    nombre_up = nombre.strip().upper()
+    existente = db.query(CatalogoInsumo).filter(
+        CatalogoInsumo.nombre.ilike(nombre_up)
+    ).first()
+    if existente:
+        # Actualizar campos si tienen valor nuevo
+        if precio is not None:
+            existente.ultimo_precio = precio
+        if fecha_compra:
+            existente.ultima_fecha_compra = str(fecha_compra)
+        if unidad and not existente.unidad:
+            existente.unidad = unidad
+        if proveedor and not existente.proveedor_habitual:
+            existente.proveedor_habitual = proveedor
+    else:
+        cat_efectiva = categoria or 'Otro'
+        nuevo = CatalogoInsumo(
+            codigo=_generar_codigo(cat_efectiva, db),
+            nombre=nombre_up,
+            categoria=cat_efectiva,
+            unidad=unidad or None,
+            proveedor_habitual=proveedor or None,
+            ultimo_precio=precio or None,
+            ultima_fecha_compra=str(fecha_compra) if fecha_compra else None,
+        )
+        db.add(nuevo)
+
+
 @router.get("/", response_model=List[CatalogoInsumoOut])
 def listar(categoria: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(CatalogoInsumo)

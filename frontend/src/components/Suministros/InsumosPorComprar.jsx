@@ -70,26 +70,11 @@ export default function InsumosPorComprar() {
       } else {
         await API.post('/pedidos-suministros/', payload);
       }
-      // Si tiene categoría y el nombre no existe en el catálogo, crearlo automáticamente
-      if (form.categoria && !editando) {
-        const existe = catalogo.some(c => c.nombre.toUpperCase() === nombreUpper);
-        if (!existe) {
-          try {
-            await API.post('/catalogo-insumos/', {
-              nombre: nombreUpper,
-              categoria: form.categoria,
-              unidad: form.unidad || null,
-              marca: null,
-              proveedor_habitual: null,
-              ultimo_precio: null,
-              notas: null,
-            });
-            // Refresca catálogo local
-            const { data } = await API.get('/catalogo-insumos/');
-            setCatalogo(data);
-          } catch { /* silencioso — no bloquea el pedido */ }
-        }
-      }
+      // El backend auto-agrega al catálogo; refrescar lista local
+      try {
+        const { data } = await API.get('/catalogo-insumos/');
+        setCatalogo(data);
+      } catch { /* silencioso */ }
       setMostrarForm(false);
       cargar();
     } catch { /* silencioso */ }
