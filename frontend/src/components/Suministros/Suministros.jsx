@@ -64,7 +64,7 @@ export default function Suministros() {
   return (
     <div>
       <div style={{ display: 'flex', gap: 4, padding: '0 32px', borderBottom: '1px solid #eee', maxWidth: 1300, margin: '0 auto' }}>
-        {pestana('pedidos', 'Pedido de Suministros')}
+        {pestana('pedidos', 'Solicitud de Cotizaciones')}
         {pestana('cotizaciones', 'Cotizaciones Recibidas')}
         {pestana('compras', 'Compras')}
         {pestana('impacto', 'Impacto Gastos en el Recibo')}
@@ -163,7 +163,7 @@ function Compras({ pedido, onPedidoUsado }) {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Compras y Suministros</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Compras Realizadas</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#777' }}>
             {suministros.length} suministro{suministros.length !== 1 ? 's' : ''} registrado{suministros.length !== 1 ? 's' : ''}
           </p>
@@ -171,7 +171,7 @@ function Compras({ pedido, onPedidoUsado }) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => setModalFactura(true)}
             style={{ padding: '10px 20px', background: '#1a7a3c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            + Factura / Nota de entrega
+            + Factura / Nota de entrega Manual
           </button>
         </div>
       </div>

@@ -302,15 +302,12 @@ export default function PedidosSuministros({ onComprar }) {
     <div style={{ padding: '24px 32px', maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Pedido de Suministros</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#777' }}>
-            {pedidos.length} línea{pedidos.length !== 1 ? 's' : ''} {filtro ? filtro.toLowerCase() + (pedidos.length !== 1 ? 's' : '') : 'en total'}
-          </p>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Solicitud de Cotizaciones</h1>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={() => window.open('https://cnviejo2-production-46d5.up.railway.app/solicitud', '_blank')}
             style={{ padding: '10px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            📋 Solicitud de Materiales
+            📋 Solicitar Cotización
           </button>
         </div>
       </div>
