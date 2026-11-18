@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
+import UnidadCombo from './UnidadCombo';
+import { UNIDADES } from './SuministroForm';
 
 const ESTADOS = ['Pendiente', 'Comprado', 'Donado'];
 const ESTADO_COLOR = {
@@ -212,7 +214,7 @@ export default function InsumosPorComprar() {
               </div>
               <div>
                 <label style={lbl}>Unidad</label>
-                <input value={form.unidad} onChange={e => setForm(f => ({ ...f, unidad: e.target.value }))} style={inp} placeholder="Ej: saco, m², und" />
+                <UnidadCombo value={form.unidad} onChange={v => setForm(f => ({ ...f, unidad: v }))} opciones={UNIDADES} estilo={inp} placeholder="Seleccionar unidad" />
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
