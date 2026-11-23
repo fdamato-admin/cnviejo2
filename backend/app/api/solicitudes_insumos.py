@@ -75,6 +75,10 @@ class SolicitudInsumoOut(BaseModel):
 class AprobarItemsIn(BaseModel):
     item_ids: List[int]
 
+class EditarItemIn(BaseModel):
+    descripcion: Optional[str] = None
+    alternativa: Optional[str] = None
+
 # --- Endpoints ---
 @router.post("/", response_model=SolicitudInsumoOut, status_code=201)
 def crear_solicitud(data: SolicitudInsumoIn, db: Session = Depends(get_db)):
@@ -230,6 +234,19 @@ def obtener_solicitud(id: int, db: Session = Depends(get_db)):
     if not s:
         raise HTTPException(404, "No encontrada")
     return s
+
+@router.patch("/items/{item_id}")
+def editar_item(item_id: int, body: EditarItemIn, db: Session = Depends(get_db)):
+    item = db.query(SolicitudInsumoItem).filter(SolicitudInsumoItem.id == item_id).first()
+    if not item:
+        raise HTTPException(404, "Ítem no encontrado")
+    if body.descripcion is not None:
+        item.descripcion = body.descripcion
+    if body.alternativa is not None:
+        item.alternativa = body.alternativa
+    db.commit()
+    db.refresh(item)
+    return {"ok": True, "id": item.id, "descripcion": item.descripcion, "alternativa": item.alternativa}
 
 @router.patch("/{id}/aprobar-items")
 def aprobar_items(id: int, body: AprobarItemsIn, db: Session = Depends(get_db)):

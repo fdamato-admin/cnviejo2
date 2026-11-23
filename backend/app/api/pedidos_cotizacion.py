@@ -1,9 +1,10 @@
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import PedidoCotizacion, PedidoCotizacionItem
+from ..models import PedidoCotizacion, PedidoCotizacionItem, Suministro, CompraSuministro
 
 router = APIRouter(prefix="/pedidos-cotizacion", tags=["Pedidos de Cotización"])
 
@@ -80,6 +81,66 @@ def actualizar_pedido(id: int, data: PedidoCotizacionIn, db: Session = Depends(g
     db.commit()
     db.refresh(p)
     return p
+
+class ItemCompraIn(BaseModel):
+    descripcion: str
+    cantidad: Optional[float] = None
+    unidad: Optional[str] = None
+    precio_usd: Optional[float] = None
+    proveedor: Optional[str] = None
+
+class ConvertirCompraIn(BaseModel):
+    items: List[ItemCompraIn]
+    proveedor: Optional[str] = None
+    fecha_compra: Optional[str] = None  # YYYY-MM-DD
+
+@router.post("/{id}/convertir-compra")
+def convertir_pedido_en_compra(id: int, data: ConvertirCompraIn, db: Session = Depends(get_db)):
+    p = db.query(PedidoCotizacion).filter(PedidoCotizacion.id == id).first()
+    if not p:
+        raise HTTPException(404, "Pedido no encontrado")
+    if not data.items:
+        raise HTTPException(400, "Debe seleccionar al menos un ítem")
+
+    try:
+        hoy = date.fromisoformat(data.fecha_compra) if data.fecha_compra else date.today()
+    except ValueError:
+        hoy = date.today()
+
+    registros = []
+    for it in data.items:
+        nuevo_sum = Suministro(
+            nombre=it.descripcion,
+            categoria="Cotizacion",
+            unidad=it.unidad or "und",
+            proveedor=it.proveedor or data.proveedor,
+            ultima_fecha_compra=hoy,
+            ultimo_precio=it.precio_usd,
+            cantidad=it.cantidad,
+            numero_documento=f"PED-{p.nro_solicitud}",
+        )
+        db.add(nuevo_sum)
+        db.flush()
+
+        monto_usd = None
+        if it.precio_usd is not None and it.cantidad is not None:
+            monto_usd = round(it.precio_usd * it.cantidad, 2)
+        elif it.precio_usd is not None:
+            monto_usd = it.precio_usd
+
+        compra = CompraSuministro(
+            suministro_id=nuevo_sum.id,
+            fecha_compra=hoy,
+            cantidad=it.cantidad,
+            monto_usd=monto_usd,
+            nombre=it.descripcion,
+        )
+        db.add(compra)
+        registros.append(it.descripcion)
+
+    db.commit()
+    return {"ok": True, "registrados": len(registros), "items": registros}
+
 
 @router.delete("/{id}")
 def eliminar_pedido(id: int, db: Session = Depends(get_db)):

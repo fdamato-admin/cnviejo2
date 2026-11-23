@@ -59,6 +59,15 @@ export default function SolicitudesInsumos() {
   const [comparador, setComparador] = useState(null);
   const [cargandoComp, setCargandoComp] = useState(false);
 
+  // Edición inline de descripción/alternativa en detalle cotización
+  const [editDescCot, setEditDescCot] = useState({}); // { [itemId]: { descripcion, alternativa } }
+  const [guardandoDesc, setGuardandoDesc] = useState({}); // { [itemId]: true/false }
+
+  // Convertir pedido en compra
+  const [modalConvertir, setModalConvertir] = useState(null); // { pedido, seleccion, proveedor, fecha }
+  const [convirtiendoPed, setConvirtiendoPed] = useState(false);
+  const [avisoConvertir, setAvisoConvertir] = useState('');
+
   useEffect(() => {
     API.get('/auth/me').then(res => {
       const permisos = res.data.permisos || [];
@@ -193,6 +202,8 @@ export default function SolicitudesInsumos() {
     (cot.items || []).forEach(it => { ini[it.id] = !!it.aprobado; });
     setAprobados(ini);
     setAvisoCot('');
+    setEditDescCot({});
+    setGuardandoDesc({});
     setDetalleCot(cot);
   };
 
@@ -242,6 +253,94 @@ export default function SolicitudesInsumos() {
       setComparador({ nro_solicitud: nro, data: res.data });
     } catch { setComparador({ nro_solicitud: nro, data: null, error: 'Error al cargar comparador.' }); }
     finally { setCargandoComp(false); }
+  };
+
+  // ── Edición inline descripción/alternativa en detalle cotización ──
+  const iniciarEditDesc = (it) => {
+    setEditDescCot(prev => ({
+      ...prev,
+      [it.id]: { descripcion: it.descripcion || '', alternativa: it.alternativa || '' }
+    }));
+  };
+
+  const cancelarEditDesc = (itemId) => {
+    setEditDescCot(prev => { const n = { ...prev }; delete n[itemId]; return n; });
+  };
+
+  const guardarDesc = async (itemId) => {
+    const vals = editDescCot[itemId];
+    if (!vals) return;
+    setGuardandoDesc(prev => ({ ...prev, [itemId]: true }));
+    try {
+      await API.patch(`/solicitudes-insumos/items/${itemId}`, {
+        descripcion: vals.descripcion,
+        alternativa: vals.alternativa,
+      });
+      // Actualizar el detalleCot en memoria
+      setDetalleCot(prev => ({
+        ...prev,
+        items: prev.items.map(it => it.id === itemId
+          ? { ...it, descripcion: vals.descripcion, alternativa: vals.alternativa }
+          : it
+        )
+      }));
+      // También actualizar en cotizaciones (lista de la tab)
+      setCotizaciones(prev => prev.map(c => ({
+        ...c,
+        items: (c.items || []).map(it => it.id === itemId
+          ? { ...it, descripcion: vals.descripcion, alternativa: vals.alternativa }
+          : it
+        )
+      })));
+      cancelarEditDesc(itemId);
+      setAvisoCot('✔ Descripción actualizada');
+      setTimeout(() => setAvisoCot(''), 2500);
+    } catch {
+      setAvisoCot('Error al guardar. Intenta de nuevo.');
+    } finally {
+      setGuardandoDesc(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  // ── Abrir modal convertir pedido en compra ────────────────────────
+  const abrirConvertir = (p) => {
+    const seleccion = {};
+    const precios = {};
+    const proveedores = {};
+    p.items.forEach(it => {
+      seleccion[it.id] = true;
+      precios[it.id] = '';
+      proveedores[it.id] = '';
+    });
+    setModalConvertir({ pedido: p, seleccion, precios, proveedores, proveedorGlobal: '', fecha: new Date().toISOString().slice(0, 10) });
+    setAvisoConvertir('');
+    setDetalle(null);
+  };
+
+  const ejecutarConvertir = async () => {
+    const { pedido, seleccion, precios, proveedores, proveedorGlobal, fecha } = modalConvertir;
+    const items = pedido.items
+      .filter(it => seleccion[it.id])
+      .map(it => ({
+        descripcion: it.descripcion,
+        cantidad: it.cantidad ? parseFloat(it.cantidad) : null,
+        unidad: it.unidad || 'und',
+        precio_usd: precios[it.id] ? parseFloat(precios[it.id]) : null,
+        proveedor: proveedores[it.id] || proveedorGlobal || null,
+      }));
+    if (items.length === 0) { setAvisoConvertir('Selecciona al menos un ítem.'); return; }
+    setConvirtiendoPed(true); setAvisoConvertir('');
+    try {
+      await API.post(`/pedidos-cotizacion/${pedido.id}/convertir-compra`, {
+        items,
+        proveedor: proveedorGlobal || null,
+        fecha_compra: fecha,
+      });
+      setModalConvertir(null);
+      mostrarAviso(`✔ ${items.length} ítem${items.length !== 1 ? 's' : ''} registrado${items.length !== 1 ? 's' : ''} en Compras.`);
+    } catch (e) {
+      setAvisoConvertir('Error al registrar. Intenta de nuevo.');
+    } finally { setConvirtiendoPed(false); }
   };
 
   if (cargando) return <p style={{ padding: 40, textAlign: 'center', color: '#888' }}>Cargando...</p>;
@@ -386,6 +485,10 @@ export default function SolicitudesInsumos() {
                   <button onClick={() => abrirEdicion(detalle)}
                     style={{ padding: '10px 20px', background: '#1a7a3c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                     Editar
+                  </button>
+                  <button onClick={() => abrirConvertir(detalle)}
+                    style={{ padding: '10px 20px', background: '#7b2d8b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    🛒 Convertir en compra
                   </button>
                   <button onClick={() => setDetalle(null)}
                     style={{ padding: '10px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>
@@ -557,7 +660,7 @@ export default function SolicitudesInsumos() {
               {detalleCot.observaciones_prov && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#888' }}>Obs: </span>{detalleCot.observaciones_prov}</div>}
             </div>
 
-            <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}>Selecciona los ítems que vas a aprobar/comprar:</p>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}>Selecciona los ítems que vas a aprobar/comprar · <span style={{ color: '#2a78d6' }}>✏️ clic en el nombre para editar</span></p>
             <div style={{ overflowX: 'auto', marginBottom: 20 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
@@ -570,23 +673,79 @@ export default function SolicitudesInsumos() {
                 <tbody>
                   {(detalleCot.items || []).map((it, i) => {
                     const sel = !!aprobados[it.id];
+                    const enEdicion = !!editDescCot[it.id];
+                    const vals = editDescCot[it.id] || {};
+                    const guardando_ = !!guardandoDesc[it.id];
                     return (
-                      <tr key={it.id} onClick={() => toggleItem(it.id)}
-                        style={{ background: sel ? '#edf7ee' : (i % 2 === 0 ? '#fff' : '#fafbfd'), borderBottom: '1px solid #eee', cursor: 'pointer' }}>
-                        <td style={tdS}><input type="checkbox" checked={sel} onChange={() => toggleItem(it.id)} onClick={e => e.stopPropagation()} style={{ width: 16, height: 16 }} /></td>
-                        <td style={tdS}>{i + 1}</td>
-                        <td style={{ ...tdS, fontWeight: 500 }}>{it.descripcion || '—'}</td>
-                        <td style={tdS}>{it.cantidad || '—'}</td>
-                        <td style={tdS}>{it.unidad || '—'}</td>
-                        <td style={{ ...tdS, color: '#666' }}>{it.alternativa || '—'}</td>
-                        <td style={{ ...tdS, fontWeight: 600 }}>{fmt(it.precio_usd)}</td>
-                        <td style={{ ...tdS, fontWeight: 700, color: '#1a7a3c' }}>{fmt(it.subtotal_usd)}</td>
+                      <tr key={it.id}
+                        style={{ background: sel ? '#edf7ee' : (i % 2 === 0 ? '#fff' : '#fafbfd'), borderBottom: '1px solid #eee' }}>
+                        <td style={tdS} onClick={() => toggleItem(it.id)} style={{ ...tdS, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={sel} onChange={() => toggleItem(it.id)} onClick={e => e.stopPropagation()} style={{ width: 16, height: 16 }} />
+                        </td>
+                        <td style={{ ...tdS, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{i + 1}</td>
+
+                        {/* Producto solicitado — editable */}
+                        <td style={{ ...tdS, minWidth: 160 }}>
+                          {enEdicion ? (
+                            <input autoFocus value={vals.descripcion}
+                              onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], descripcion: e.target.value } }))}
+                              onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
+                              style={{ ...inp, padding: '4px 8px', fontSize: 13, fontWeight: 600, border: '2px solid #2a78d6' }} />
+                          ) : (
+                            <span onClick={() => iniciarEditDesc(it)}
+                              title="Clic para editar"
+                              style={{ fontWeight: 600, cursor: 'text', borderBottom: '1px dashed #bbb', paddingBottom: 1 }}>
+                              {it.descripcion || '—'}
+                            </span>
+                          )}
+                        </td>
+
+                        <td style={{ ...tdS, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{it.cantidad || '—'}</td>
+                        <td style={{ ...tdS, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{it.unidad || '—'}</td>
+
+                        {/* Producto ofrecido (alternativa) — editable */}
+                        <td style={{ ...tdS, minWidth: 140 }}>
+                          {enEdicion ? (
+                            <input value={vals.alternativa}
+                              onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], alternativa: e.target.value } }))}
+                              onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
+                              placeholder="Producto ofrecido"
+                              style={{ ...inp, padding: '4px 8px', fontSize: 13, border: '2px solid #2a78d6' }} />
+                          ) : (
+                            <span onClick={() => iniciarEditDesc(it)}
+                              title="Clic para editar"
+                              style={{ color: '#666', cursor: 'text', borderBottom: '1px dashed #bbb', paddingBottom: 1 }}>
+                              {it.alternativa || <span style={{ color: '#ccc' }}>—</span>}
+                            </span>
+                          )}
+                        </td>
+
+                        <td style={{ ...tdS, fontWeight: 600, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{fmt(it.precio_usd)}</td>
+                        <td style={{ ...tdS, fontWeight: 700, color: '#1a7a3c', cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{fmt(it.subtotal_usd)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+
+            {/* Botones guardar/cancelar edición si hay algún ítem en edición */}
+            {Object.keys(editDescCot).length > 0 && (
+              <div style={{ background: '#e8f0fe', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
+                <span style={{ color: '#2a78d6', fontWeight: 600 }}>✏️ Editando descripción</span>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                  <button onClick={() => { const id = parseInt(Object.keys(editDescCot)[0]); guardarDesc(id); }}
+                    disabled={Object.values(guardandoDesc).some(Boolean)}
+                    style={{ padding: '6px 16px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    {Object.values(guardandoDesc).some(Boolean) ? 'Guardando...' : '✔ Guardar'}
+                  </button>
+                  <button onClick={() => setEditDescCot({})}
+                    style={{ padding: '6px 14px', border: '1px solid #aaa', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div style={{ textAlign: 'right', background: '#1a3a5c', color: '#fff', borderRadius: 10, padding: '14px 20px', marginBottom: 20 }}>
               <div style={{ fontSize: 13, opacity: 0.8 }}>Subtotal USD</div>
@@ -630,6 +789,121 @@ export default function SolicitudesInsumos() {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL CONVERTIR EN COMPRA ── */}
+      {modalConvertir && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1300, padding: '24px 16px', overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 760, marginBottom: 24 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1a3a5c' }}>🛒 Convertir en compra</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#777' }}>Solicitud #{modalConvertir.pedido.nro_solicitud} · {modalConvertir.pedido.obra}</p>
+              </div>
+              <button onClick={() => setModalConvertir(null)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>&#x2715;</button>
+            </div>
+
+            {/* Proveedor global y fecha */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Proveedor (global)</label>
+                <input style={inp} placeholder="Nombre del proveedor"
+                  value={modalConvertir.proveedorGlobal}
+                  onChange={e => setModalConvertir(prev => ({ ...prev, proveedorGlobal: e.target.value }))} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Fecha de compra</label>
+                <input type="date" style={inp}
+                  value={modalConvertir.fecha}
+                  onChange={e => setModalConvertir(prev => ({ ...prev, fecha: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* Tabla de ítems con checkbox y precio */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#7b2d8b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+              Seleccioná los ítems a comprar e ingresá el precio
+            </div>
+            <div style={{ overflowX: 'auto', marginBottom: 20 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#f5f7fa' }}>
+                    <th style={{ ...thS, width: 36 }}>✓</th>
+                    <th style={thS}>Producto</th>
+                    <th style={{ ...thS, width: 70 }}>Cant.</th>
+                    <th style={{ ...thS, width: 70 }}>Unidad</th>
+                    <th style={{ ...thS, width: 120 }}>Precio USD</th>
+                    <th style={{ ...thS, width: 100 }}>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modalConvertir.pedido.items.map((it, i) => {
+                    const sel = modalConvertir.seleccion[it.id];
+                    const precio = parseFloat(modalConvertir.precios[it.id]) || 0;
+                    const cant = parseFloat(it.cantidad) || 0;
+                    const sub = precio > 0 && cant > 0 ? precio * cant : precio > 0 ? precio : null;
+                    return (
+                      <tr key={it.id} style={{ background: sel ? (i % 2 === 0 ? '#faf4ff' : '#f4ebff') : (i % 2 === 0 ? '#fff' : '#fafbfd'), borderBottom: '1px solid #eee', opacity: sel ? 1 : 0.5 }}>
+                        <td style={{ ...tdS, textAlign: 'center' }}>
+                          <input type="checkbox" checked={!!sel}
+                            onChange={e => setModalConvertir(prev => ({ ...prev, seleccion: { ...prev.seleccion, [it.id]: e.target.checked } }))}
+                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#7b2d8b' }} />
+                        </td>
+                        <td style={{ ...tdS, fontWeight: 500 }}>{it.descripcion}</td>
+                        <td style={{ ...tdS, color: '#666' }}>{it.cantidad || '—'}</td>
+                        <td style={{ ...tdS, color: '#666' }}>{it.unidad || '—'}</td>
+                        <td style={tdS}>
+                          <input type="number" min="0" step="0.01" placeholder="0.00"
+                            value={modalConvertir.precios[it.id]}
+                            onChange={e => setModalConvertir(prev => ({ ...prev, precios: { ...prev.precios, [it.id]: e.target.value } }))}
+                            disabled={!sel}
+                            style={{ ...inp, padding: '4px 8px', fontSize: 13, width: 100, textAlign: 'right' }} />
+                        </td>
+                        <td style={{ ...tdS, fontWeight: 600, color: sub ? '#1a7a3c' : '#ccc' }}>
+                          {sub ? '$' + sub.toFixed(2) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Total estimado */}
+            {(() => {
+              const totalEst = modalConvertir.pedido.items
+                .filter(it => modalConvertir.seleccion[it.id] && modalConvertir.precios[it.id])
+                .reduce((acc, it) => {
+                  const p = parseFloat(modalConvertir.precios[it.id]) || 0;
+                  const c = parseFloat(it.cantidad) || 1;
+                  return acc + p * c;
+                }, 0);
+              return totalEst > 0 ? (
+                <div style={{ background: '#e8f6ec', borderRadius: 8, padding: '10px 16px', marginBottom: 16, fontSize: 14, fontWeight: 700, color: '#1a7a3c', textAlign: 'right' }}>
+                  Total estimado: ${totalEst.toFixed(2)} USD
+                </div>
+              ) : null;
+            })()}
+
+            {avisoConvertir && (
+              <div style={{ background: '#fff3cd', borderRadius: 8, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#7a5100' }}>
+                {avisoConvertir}
+              </div>
+            )}
+
+            {/* Botones */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalConvertir(null)}
+                style={{ padding: '10px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={ejecutarConvertir} disabled={convirtiendoPed}
+                style={{ padding: '10px 24px', background: '#7b2d8b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: convirtiendoPed ? 0.7 : 1 }}>
+                {convirtiendoPed ? 'Registrando...' : '🛒 Registrar en Compras'}
+              </button>
             </div>
           </div>
         </div>
