@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import SuministroForm from './SuministroForm';
-import PedidosSuministros from './PedidosSuministros';
 import ImpactoRecibo from './ImpactoRecibo';
 import CotizacionesInsumos from './CotizacionesInsumos';
 import InsumosPorComprar from './InsumosPorComprar';
 import CatalogoInsumos from './CatalogoInsumos';
+import SolicitudesInsumos from './SolicitudesInsumos';
 import FacturaCompraForm from './FacturaCompraForm';
 
 const CATEGORIAS = [
@@ -52,7 +52,6 @@ function formatDocumento(s) {
 export default function Suministros() {
   const [vista, setVista] = useState('compras');
   const [pedidoACompra, setPedidoACompra] = useState(null);
-  const comprarPedido = (p) => { setPedidoACompra(p); setVista('compras'); };
   const pestana = (id, texto) => (
     <button onClick={() => setVista(id)}
       style={{
@@ -68,7 +67,7 @@ export default function Suministros() {
       <div style={{ display: 'flex', gap: 4, padding: '0 32px', borderBottom: '1px solid #eee', maxWidth: 1300, margin: '0 auto' }}>
         {pestana('catalogo', 'Catálogo de Insumos')}
         {pestana('insumos', 'Insumos por Comprar')}
-        {pestana('pedidos', 'Solicitud de Cotizaciones')}
+        {pestana('seguimiento', 'Seguimiento de Cotizaciones')}
         {pestana('cotizaciones', 'Cotizaciones Recibidas')}
         {pestana('compras', 'Compras')}
         {pestana('impacto', 'Impacto Gastos en el Recibo')}
@@ -76,7 +75,7 @@ export default function Suministros() {
       {vista === 'catalogo' && <CatalogoInsumos />}
       {vista === 'insumos' && <InsumosPorComprar />}
       {vista === 'compras' && <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />}
-      {vista === 'pedidos' && <PedidosSuministros onComprar={comprarPedido} />}
+      {vista === 'seguimiento' && <SolicitudesInsumos />}
       {vista === 'impacto' && <ImpactoRecibo />}
       {vista === 'cotizaciones' && <CotizacionesInsumos />}
     </div>
