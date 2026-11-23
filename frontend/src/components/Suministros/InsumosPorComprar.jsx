@@ -34,6 +34,7 @@ export default function InsumosPorComprar() {
   const [formCot, setFormCot] = useState({ nro_solicitud: '', obra: 'Condominio Náutico Pueblo Viejo II', fecha_requerida: '', observaciones: '' });
   const [enviandoCot, setEnviandoCot] = useState(false);
   const [avisoCot, setAvisoCot] = useState('');
+  const [enlaceCot, setEnlaceCot] = useState(null); // { url, nro } después de crear
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -124,10 +125,13 @@ export default function InsumosPorComprar() {
     }
   };
 
+  const BACKEND_URL = 'https://cnviejo2-production-46d5.up.railway.app';
+
   const abrirModalCotizacion = () => {
     const nro = `COT-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
     setFormCot({ nro_solicitud: nro, obra: 'Condominio Náutico Pueblo Viejo II', fecha_requerida: '', observaciones: '' });
     setAvisoCot('');
+    setEnlaceCot(null);
     setModalCotizacion(true);
   };
 
@@ -138,21 +142,28 @@ export default function InsumosPorComprar() {
     setEnviandoCot(true);
     try {
       const itemsSeleccionados = listaFiltrada.filter(i => seleccionados.has(i.id));
+      const nroUp = formCot.nro_solicitud.trim().toUpperCase();
+      const obraUp = formCot.obra.trim().toUpperCase();
+      const obsUp = formCot.observaciones ? formCot.observaciones.trim().toUpperCase() : null;
+      const itemsPayload = itemsSeleccionados.map(i => ({
+        descripcion: i.nombre,
+        cantidad: String(i.cantidad),
+        unidad: i.unidad || null,
+      }));
       await API.post('/pedidos-cotizacion/', {
-        nro_solicitud: formCot.nro_solicitud.trim().toUpperCase(),
-        obra: formCot.obra.trim().toUpperCase(),
+        nro_solicitud: nroUp,
+        obra: obraUp,
         fecha_requerida: formCot.fecha_requerida || null,
-        observaciones: formCot.observaciones ? formCot.observaciones.trim().toUpperCase() : null,
-        items: itemsSeleccionados.map(i => ({
-          descripcion: i.nombre,
-          cantidad: String(i.cantidad),
-          unidad: i.unidad || null,
-        })),
+        observaciones: obsUp,
+        items: itemsPayload,
       });
-      setModalCotizacion(false);
+      // Construir enlace para proveedor
+      const paramsItems = itemsPayload.map(it =>
+        `i=${encodeURIComponent((it.descripcion || '') + '|' + (it.cantidad || '') + '|' + (it.unidad || ''))}`
+      ).join('&');
+      const url = `${BACKEND_URL}/solicitud?modo=proveedor&obra=${encodeURIComponent(obraUp)}&ref=${encodeURIComponent(nroUp)}&${paramsItems}`;
+      setEnlaceCot({ url, nro: nroUp });
       setSeleccionados(new Set());
-      setAvisoCot('');
-      alert(`Solicitud de cotización creada exitosamente.`);
     } catch (e) {
       const det = e.response?.data?.detail;
       setAvisoCot(det || 'Error al crear la solicitud.');
@@ -372,46 +383,83 @@ export default function InsumosPorComprar() {
       {/* Modal solicitud de cotización */}
       {modalCotizacion && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 500 }}>
-            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700 }}>Solicitar Cotización</h2>
-            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#777' }}>{seleccionados.size} insumo(s) seleccionado(s)</p>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 520 }}>
+            {enlaceCot ? (
+              /* Pantalla de éxito con enlace */
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                  <div style={{ fontSize: 36 }}>✅</div>
+                  <h2 style={{ margin: '8px 0 4px', fontSize: 18, fontWeight: 700 }}>Solicitud creada</h2>
+                  <p style={{ margin: 0, fontSize: 13, color: '#777' }}>{enlaceCot.nro}</p>
+                </div>
+                <p style={{ fontSize: 14, color: '#444', marginBottom: 10 }}>Comparte este enlace con el proveedor para que cotice los insumos:</p>
+                <div style={{ background: '#f4f7fb', border: '1px solid #c5d8f7', borderRadius: 8, padding: '10px 12px', marginBottom: 16, wordBreak: 'break-all', fontSize: 12, color: '#1a3a5c' }}>
+                  {enlaceCot.url}
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <button onClick={() => { navigator.clipboard.writeText(enlaceCot.url); }}
+                    style={{ flex: 1, padding: '10px 16px', background: '#1b4f8f', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    📋 Copiar enlace
+                  </button>
+                  <a href={`https://wa.me/?text=${encodeURIComponent('Solicitud de cotización ' + enlaceCot.nro + ':\n' + enlaceCot.url)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', background: '#25D366', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                    📱 Enviar por WhatsApp
+                  </a>
+                  <a href={`mailto:?subject=${encodeURIComponent('Solicitud de cotización ' + enlaceCot.nro)}&body=${encodeURIComponent('Por favor cotizar los siguientes insumos:\n\n' + enlaceCot.url)}`}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', background: '#555', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                    ✉️ Enviar por Email
+                  </a>
+                </div>
+                <button onClick={() => { setModalCotizacion(false); setEnlaceCot(null); }}
+                  style={{ width: '100%', padding: '9px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>
+                  Cerrar
+                </button>
+              </>
+            ) : (
+              /* Formulario de creación */
+              <>
+                <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700 }}>Solicitar Cotización</h2>
+                <p style={{ margin: '0 0 18px', fontSize: 13, color: '#777' }}>{seleccionados.size} insumo(s) seleccionado(s)</p>
 
-            {avisoCot && <p style={{ background: '#fdecec', color: '#c00', padding: '8px 12px', borderRadius: 7, fontSize: 13, marginBottom: 12 }}>{avisoCot}</p>}
+                {avisoCot && <p style={{ background: '#fdecec', color: '#c00', padding: '8px 12px', borderRadius: 7, fontSize: 13, marginBottom: 12 }}>{avisoCot}</p>}
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={lbl}>Nº de Solicitud *</label>
-              <input value={formCot.nro_solicitud} onChange={e => setFormCot(f => ({ ...f, nro_solicitud: e.target.value.toUpperCase() }))} style={inp} placeholder="Ej: COT-2026-001" />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={lbl}>Obra / Proyecto *</label>
-              <input value={formCot.obra} onChange={e => setFormCot(f => ({ ...f, obra: e.target.value.toUpperCase() }))} style={inp} />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={lbl}>Fecha requerida (opcional)</label>
-              <input type="date" value={formCot.fecha_requerida} onChange={e => setFormCot(f => ({ ...f, fecha_requerida: e.target.value }))} style={inp} />
-            </div>
-            <div style={{ marginBottom: 18 }}>
-              <label style={lbl}>Observaciones (opcional)</label>
-              <input value={formCot.observaciones} onChange={e => setFormCot(f => ({ ...f, observaciones: e.target.value.toUpperCase() }))} style={inp} placeholder="Ej: Urgente para mantenimiento de piscina" />
-            </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={lbl}>Nº de Solicitud *</label>
+                  <input value={formCot.nro_solicitud} onChange={e => setFormCot(f => ({ ...f, nro_solicitud: e.target.value.toUpperCase() }))} style={inp} placeholder="Ej: COT-2026-001" />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={lbl}>Obra / Proyecto *</label>
+                  <input value={formCot.obra} onChange={e => setFormCot(f => ({ ...f, obra: e.target.value.toUpperCase() }))} style={inp} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={lbl}>Fecha requerida (opcional)</label>
+                  <input type="date" value={formCot.fecha_requerida} onChange={e => setFormCot(f => ({ ...f, fecha_requerida: e.target.value }))} style={inp} />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={lbl}>Observaciones (opcional)</label>
+                  <input value={formCot.observaciones} onChange={e => setFormCot(f => ({ ...f, observaciones: e.target.value.toUpperCase() }))} style={inp} placeholder="Ej: Urgente para mantenimiento de piscina" />
+                </div>
 
-            <div style={{ background: '#f7f9fc', borderRadius: 8, padding: 12, marginBottom: 18, maxHeight: 150, overflowY: 'auto' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 6 }}>INSUMOS INCLUIDOS:</div>
-              {listaFiltrada.filter(i => seleccionados.has(i.id)).map(i => (
-                <div key={i.id} style={{ fontSize: 13, color: '#333', padding: '2px 0' }}>• {i.nombre} — {i.cantidad} {i.unidad || ''}</div>
-              ))}
-            </div>
+                <div style={{ background: '#f7f9fc', borderRadius: 8, padding: 12, marginBottom: 18, maxHeight: 150, overflowY: 'auto' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 6 }}>INSUMOS INCLUIDOS:</div>
+                  {listaFiltrada.filter(i => seleccionados.has(i.id)).map(i => (
+                    <div key={i.id} style={{ fontSize: 13, color: '#333', padding: '2px 0' }}>• {i.nombre} — {i.cantidad} {i.unidad || ''}</div>
+                  ))}
+                </div>
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setModalCotizacion(false)}
-                style={{ padding: '9px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-              <button onClick={enviarCotizacion} disabled={enviandoCot}
-                style={{ padding: '9px 22px', background: '#1b4f8f', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                {enviandoCot ? 'Creando...' : 'Crear Solicitud'}
-              </button>
-            </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setModalCotizacion(false)}
+                    style={{ padding: '9px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                  <button onClick={enviarCotizacion} disabled={enviandoCot}
+                    style={{ padding: '9px 22px', background: '#1b4f8f', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    {enviandoCot ? 'Creando...' : 'Crear Solicitud'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
