@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api';
 import SuministroForm from './SuministroForm';
 import ImpactoRecibo from './ImpactoRecibo';
-import CotizacionesInsumos from './CotizacionesInsumos';
 import InsumosPorComprar from './InsumosPorComprar';
 import CatalogoInsumos from './CatalogoInsumos';
 import SolicitudesInsumos from './SolicitudesInsumos';
@@ -68,7 +67,6 @@ export default function Suministros() {
         {pestana('catalogo', 'Catálogo de Insumos')}
         {pestana('insumos', 'Insumos por Comprar')}
         {pestana('seguimiento', 'Seguimiento de Cotizaciones')}
-        {pestana('cotizaciones', 'Cotizaciones Recibidas')}
         {pestana('compras', 'Compras')}
         {pestana('impacto', 'Impacto Gastos en el Recibo')}
       </div>
@@ -77,7 +75,6 @@ export default function Suministros() {
       {vista === 'compras' && <Compras pedido={pedidoACompra} onPedidoUsado={() => setPedidoACompra(null)} />}
       {vista === 'seguimiento' && <SolicitudesInsumos />}
       {vista === 'impacto' && <ImpactoRecibo />}
-      {vista === 'cotizaciones' && <CotizacionesInsumos />}
     </div>
   );
 }

@@ -174,8 +174,11 @@ def nuevo_nro_solicitud(db: Session = Depends(get_db)):
     return {"nro_solicitud": str(siguiente).zfill(6)}
 
 @router.get("/", response_model=List[SolicitudInsumoOut])
-def listar_solicitudes(db: Session = Depends(get_db)):
-    return db.query(SolicitudInsumos).order_by(SolicitudInsumos.creado_en.desc()).all()
+def listar_solicitudes(nro_solicitud: Optional[str] = None, db: Session = Depends(get_db)):
+    q = db.query(SolicitudInsumos)
+    if nro_solicitud:
+        q = q.filter(SolicitudInsumos.nro_solicitud == nro_solicitud)
+    return q.order_by(SolicitudInsumos.creado_en.desc()).all()
 
 @router.get("/comparar/{nro_solicitud}")
 def comparar_solicitud_get(nro_solicitud: str, db: Session = Depends(get_db)):
