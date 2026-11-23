@@ -21,7 +21,7 @@ function Fila({ etiqueta, valor, signo, fuerte, pct }) {
       <span style={{ color: fuerte ? '#222' : '#555' }}>{signo ? `${signo} ` : ''}{etiqueta}</span>
       <span>
         {usd(valor)}
-        {pct !== undefined && <span style={{ display: 'inline-block', minWidth: 62, textAlign: 'right', fontSize: 13, color: '#888', fontWeight: 400 }}>{pct.toFixed(1)}%</span>}
+        {pct !== undefined && <span style={{ display: 'inline-block', minWidth: 62, textAlign: 'right', fontSize: 13, color: '#888', fontWeight: 400 }}>{pct.toFixed(2)}%</span>}
       </span>
     </div>
   );
@@ -267,7 +267,7 @@ export default function ImpactoRecibo() {
                   <td style={{ ...td, color: '#666' }}>{f.tipo}</td>
                   <td style={td}>{usd(f.monto_usd)}</td>
                   <td style={td}>{usd(porVilla(f.monto_usd))}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{f.activo ? `${pctDe(f.monto_usd).toFixed(1)}%` : '—'}</td>
+                  <td style={{ ...td, fontWeight: 600 }}>{f.activo ? `${pctDe(f.monto_usd).toFixed(2)}%` : '—'}</td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button style={{ ...btn, marginRight: 8 }} onClick={() => setFormFijo({ ...f })}>Editar</button>
                     <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarFijo(f)}>Eliminar</button>
@@ -297,7 +297,7 @@ export default function ImpactoRecibo() {
                     <td style={{ ...td, color: '#666' }}>{c.proveedor || '—'}</td>
                     <td style={td}>{c.convertido ? usd(c.monto_usd) : <span style={{ color: '#a15c00' }}>Sin convertir</span>}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{c.convertido ? `+${usd(porVilla(c.monto_usd))}` : '—'}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{c.convertido && incluirCompras ? `${pctDe(c.monto_usd).toFixed(1)}%` : '—'}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{c.convertido && incluirCompras ? `${pctDe(c.monto_usd).toFixed(2)}%` : '—'}</td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       {(c.suministro_id || c.historial_id) && <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarCompra(c)}>Eliminar</button>}
                     </td>
@@ -348,7 +348,7 @@ export default function ImpactoRecibo() {
                     </td>
                     <td style={td}>{usd(e.monto_usd)}</td>
                     <td style={{ ...td, fontWeight: 600 }}>+{usd(porVilla(e.monto_usd))}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{extraIncluido(e) ? `${pctDe(e.monto_usd).toFixed(1)}%` : '—'}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{extraIncluido(e) ? `${pctDe(e.monto_usd).toFixed(2)}%` : '—'}</td>
                     <td style={{ ...td, color: '#666' }}>{e.nota || '—'}</td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarExtra(e)}>Eliminar</button>
