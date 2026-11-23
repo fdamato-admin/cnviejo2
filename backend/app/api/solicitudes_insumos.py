@@ -85,22 +85,24 @@ def crear_solicitud(data: SolicitudInsumoIn, db: Session = Depends(get_db)):
     proveedor_id = None
     if data.proveedor_telefono:
         tel = data.proveedor_telefono.strip()
-        prov = db.query(Proveedor).filter(
-            or_(Proveedor.telefono == tel, Proveedor.telefono_alt == tel)
-        ).first()
-        if not prov and data.proveedor_nombre:
-            prov = Proveedor(
-                nombre=data.proveedor_nombre,
-                empresa=data.proveedor_nombre,
-                tipo=TipoProveedor.insumo,
-                categoria="General",
-                telefono=tel,
-                estado=EstadoProveedor.activo
-            )
-            db.add(prov)
-            db.flush()
-        if prov:
-            proveedor_id = prov.id
+        try:
+            prov = db.query(Proveedor).filter(Proveedor.telefono == tel).first()
+            if not prov and data.proveedor_nombre:
+                prov = Proveedor(
+                    nombre=data.proveedor_nombre,
+                    empresa=data.proveedor_nombre,
+                    tipo=TipoProveedor.insumo,
+                    categoria="General",
+                    telefono=tel,
+                    estado=EstadoProveedor.activo
+                )
+                db.add(prov)
+                db.flush()
+            if prov:
+                proveedor_id = prov.id
+        except Exception:
+            db.rollback()
+            proveedor_id = None
 
     # Generar nro_solicitud si no viene en el payload
     nro_solicitud = data.nro_solicitud

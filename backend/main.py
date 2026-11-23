@@ -15,6 +15,17 @@ with engine.connect() as _conn:
     except Exception:
         pass
 
+def _migrar_proveedores():
+    from sqlalchemy import text
+    with engine.begin() as con:
+        cols = [r[1] for r in con.execute(text("PRAGMA table_info(proveedores)"))]
+        if not cols:
+            return
+        if "telefono_alt" not in cols:
+            con.execute(text("ALTER TABLE proveedores ADD COLUMN telefono_alt VARCHAR(30)"))
+
+_migrar_proveedores()
+
 def _migrar_suministros():
     from sqlalchemy import text
     nuevas = {
@@ -180,3 +191,14 @@ def _migrar_catalogo_insumos():
         """))
 
 _migrar_catalogo_insumos()
+
+def _migrar_solicitudes_insumos_v3():
+    from sqlalchemy import text
+    with engine.begin() as con:
+        cols = [r[1] for r in con.execute(text("PRAGMA table_info(solicitudes_insumos)"))]
+        if not cols:
+            return
+        if "cotizacion_adjunta_url" not in cols:
+            con.execute(text("ALTER TABLE solicitudes_insumos ADD COLUMN cotizacion_adjunta_url VARCHAR(500)"))
+
+_migrar_solicitudes_insumos_v3()
