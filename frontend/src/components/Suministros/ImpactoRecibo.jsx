@@ -40,6 +40,7 @@ export default function ImpactoRecibo() {
   const [fondoEdit, setFondoEdit] = useState('10');
   const [formFijo, setFormFijo] = useState(null);
   const [formExtra, setFormExtra] = useState({ concepto: '', monto: '', estado: 'Realizado', tipo: 'Gasto', nota: '' });
+  const [editExtra, setEditExtra] = useState(null);
   const [aviso, setAviso] = useState('');
 
   const cargar = useCallback(async () => {
@@ -150,6 +151,19 @@ export default function ImpactoRecibo() {
 
   const borrarExtra = (e) => {
     if (window.confirm(`¿Eliminar "${e.concepto}"?`)) accion(() => API.delete(`/recibo/extras/${e.id}`));
+  };
+
+  const guardarEditExtra = () => {
+    const monto = parseFloat(editExtra.monto_usd);
+    if (!editExtra.concepto.trim()) { setError('Escribe el concepto'); return; }
+    if (!monto || monto <= 0) { setError('El monto debe ser mayor a cero'); return; }
+    accion(async () => {
+      await API.put(`/recibo/extras/${editExtra.id}`, {
+        mes, concepto: editExtra.concepto.trim().toUpperCase(), monto_usd: monto,
+        estado: editExtra.estado, tipo: editExtra.tipo, nota: editExtra.nota ? editExtra.nota.toUpperCase() : null,
+      });
+      setEditExtra(null);
+    });
   };
 
   const check = (valor, setValor, texto, deshabilitado, nota) => (
@@ -332,6 +346,21 @@ export default function ImpactoRecibo() {
           <input placeholder="Nota (opcional)" value={formExtra.nota} onChange={e => setFormExtra(f => ({ ...f, nota: e.target.value.toUpperCase() }))} style={{ ...inp, flex: '2 1 160px', minWidth: 0 }} />
           <button style={btnAzul} onClick={agregarExtra}>Agregar</button>
         </div>
+        {editExtra && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, padding: 12, background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8 }}>
+            <input placeholder="Concepto" value={editExtra.concepto} onChange={e => setEditExtra(f => ({ ...f, concepto: e.target.value.toUpperCase() }))} style={{ ...inp, flex: '2 1 200px', minWidth: 0 }} />
+            <input type="number" min="0" step="0.01" placeholder="Monto USD" value={editExtra.monto_usd} onChange={e => setEditExtra(f => ({ ...f, monto_usd: e.target.value }))} style={{ ...inp, width: 130 }} />
+            <select value={editExtra.tipo} onChange={e => setEditExtra(f => ({ ...f, tipo: e.target.value }))} style={inp}>
+              {TIPOS_EXTRA.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={editExtra.estado} onChange={e => setEditExtra(f => ({ ...f, estado: e.target.value }))} style={inp}>
+              {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <input placeholder="Nota (opcional)" value={editExtra.nota || ''} onChange={e => setEditExtra(f => ({ ...f, nota: e.target.value.toUpperCase() }))} style={{ ...inp, flex: '2 1 160px', minWidth: 0 }} />
+            <button style={btnAzul} onClick={guardarEditExtra}>Guardar</button>
+            <button style={btn} onClick={() => setEditExtra(null)}>Cancelar</button>
+          </div>
+        )}
         {data.extras.length === 0 ? (
           <p style={{ color: '#aaa', fontSize: 14 }}>No hay otros gastos en este mes.</p>
         ) : (
@@ -340,7 +369,7 @@ export default function ImpactoRecibo() {
               <thead><tr>{['Concepto', 'Tipo', 'Estado', 'Monto (USD)', 'Sube por villa', '% del recibo', 'Nota', ''].map(h => <th key={h || 'acc'} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {data.extras.map(e => (
-                  <tr key={e.id}>
+                  <tr key={e.id} style={{ background: editExtra && editExtra.id === e.id ? '#fffbe6' : 'transparent' }}>
                     <td style={{ ...td, fontWeight: 500 }}>{e.concepto}</td>
                     <td style={{ ...td, color: '#666' }}>{e.tipo || 'Gasto'}</td>
                     <td style={td}>
@@ -350,7 +379,8 @@ export default function ImpactoRecibo() {
                     <td style={{ ...td, fontWeight: 600 }}>+{usd(porVilla(e.monto_usd))}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{extraIncluido(e) ? `${pctDe(e.monto_usd).toFixed(2)}%` : '—'}</td>
                     <td style={{ ...td, color: '#666' }}>{e.nota || '—'}</td>
-                    <td style={{ ...td, textAlign: 'right' }}>
+                    <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button style={{ ...btn, marginRight: 6 }} onClick={() => setEditExtra({ ...e })}>Editar</button>
                       <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarExtra(e)}>Eliminar</button>
                     </td>
                   </tr>
