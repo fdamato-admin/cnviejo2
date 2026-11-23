@@ -171,7 +171,8 @@
         <span id="total-final-bs" style="font-size:14px;opacity:0.8;display:block"></span>
       </div>
     </div>
-    <button class="btn-send" onclick="enviarProveedor()">Preparar cotización</button>
+    <button id="btn-preparar-cot" class="btn-send" onclick="enviarProveedor()">Preparar cotización</button>
+    <div id="aviso-guardado-prov" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:10px;text-align:center"></div>
     <div id="envio-prov-opts" style="display:none;gap:10px;margin-top:12px;flex-wrap:wrap">
       <button id="btn-email-prov" class="btn-send" style="background:#1a3a5c;flex:1">📧 Enviar por Email</button>
       <button id="btn-wa-prov" class="btn-send" style="background:#25d366;flex:1">📱 Enviar por WhatsApp</button>
@@ -503,7 +504,7 @@ function actualizarIVAVisibilidad() {
   });
 }
 
-function enviarProveedor() {
+async function enviarProveedor() {
   const nombre = document.getElementById('prov-nombre').value.trim();
   const tel = document.getElementById('prov-tel').value.trim();
   const validez = document.getElementById('prov-validez').value.trim();
@@ -642,36 +643,95 @@ function enviarProveedor() {
 
   // Guardar cotización en la BD
   const tasaGlobal = getTasaGlobal();
-  const itemsGuardar = iParams.map((raw, idx) => {
-    const [desc, cant, unit] = raw.split('|');
-    const precioU = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
-    return {
-      descripcion: desc || '',
-      cantidad: cant || '',
-      unidad: unit || '',
-      alternativa: document.getElementById('alt-'+idx)?.value.trim() || '',
-      precio_usd: precioU,
-      tasa_bs: tasaGlobal || 0,
-      subtotal_usd: precioU * parseFloat(cant || 1)
-    };
-  });
+  let itemsGuardar = [];
+  if (iParams.length) {
+    itemsGuardar = iParams.map((raw, idx) => {
+      const [desc, cant, unit] = raw.split('|');
+      const precioU = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
+      return {
+        descripcion: desc || '',
+        cantidad: cant || '',
+        unidad: unit || '',
+        alternativa: document.getElementById('alt-'+idx)?.value.trim() || '',
+        precio_usd: precioU,
+        tasa_bs: tasaGlobal || 0,
+        subtotal_usd: precioU * parseFloat(cant || 1)
+      };
+    });
+  } else {
+    // Modo manual: capturar los 5 inputs libres
+    for (let idx = 0; idx < 5; idx++) {
+      const desc = document.getElementById('desc-prov-'+idx)?.value.trim() || '';
+      const cantStr = document.getElementById('cant-prov-'+idx)?.value.trim() || '';
+      const unit = document.getElementById('unit-prov-'+idx)?.value.trim() || '';
+      const precioU = parseFloat(document.getElementById('precio-'+idx)?.value || 0);
+      const cantNum = parseFloat(cantStr || 1);
+      if (desc || precioU) {
+        itemsGuardar.push({
+          descripcion: desc,
+          cantidad: cantStr,
+          unidad: unit,
+          alternativa: document.getElementById('alt-'+idx)?.value.trim() || '',
+          precio_usd: precioU,
+          tasa_bs: tasaGlobal || 0,
+          subtotal_usd: precioU * cantNum
+        });
+      }
+    }
+  }
 
   // Leer nro_solicitud del parámetro ?ref= de la URL
   const nroSolicitudURL = new URLSearchParams(window.location.search).get('ref') || null;
 
-  fetch('https://cnviejo2-production-46d5.up.railway.app/api/solicitudes-insumos/', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      obra, proveedor_nombre: nombre, proveedor_telefono: tel,
-      nro_solicitud: nroSolicitudURL,
-      validez, tiempo_entrega: entrega,
-      condicion_pago: pagos.join(', ') || '',
-      subtotal_usd: total, iva_usd: iva, total_usd: total + iva,
-      banco, titular, cuenta, tipo_cuenta: tipoCuenta, rif,
-      observaciones_prov: obsP, items: itemsGuardar
-    })
-  }).catch(() => {}); // silencioso — no bloquea el envío
+  // Bloquear botón mientras guarda
+  const btnPreparar = document.getElementById('btn-preparar-cot');
+  const avisoGuardado = document.getElementById('aviso-guardado-prov');
+  if (btnPreparar) { btnPreparar.disabled = true; btnPreparar.textContent = '⏳ Guardando cotización...'; }
+
+  let guardadoOk = false;
+  try {
+    const resp = await fetch('https://cnviejo2-production-46d5.up.railway.app/api/solicitudes-insumos/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        obra, proveedor_nombre: nombre, proveedor_telefono: tel,
+        nro_solicitud: nroSolicitudURL,
+        validez, tiempo_entrega: entrega,
+        condicion_pago: pagos.join(', ') || '',
+        subtotal_usd: total, iva_usd: iva, total_usd: total + iva,
+        banco, titular, cuenta, tipo_cuenta: tipoCuenta, rif,
+        observaciones_prov: obsP, items: itemsGuardar
+      })
+    });
+    if (resp.ok) {
+      guardadoOk = true;
+      if (avisoGuardado) {
+        avisoGuardado.style.display = 'block';
+        avisoGuardado.style.background = '#d4edda';
+        avisoGuardado.style.color = '#155724';
+        avisoGuardado.textContent = '✅ Cotización registrada correctamente. Ahora envíela por WhatsApp o Email.';
+      }
+    } else {
+      const errTxt = await resp.text().catch(() => resp.status);
+      if (avisoGuardado) {
+        avisoGuardado.style.display = 'block';
+        avisoGuardado.style.background = '#fff3cd';
+        avisoGuardado.style.color = '#856404';
+        avisoGuardado.textContent = `⚠️ No se pudo registrar en el sistema (${resp.status}). Puede igual enviar por WhatsApp o Email.`;
+      }
+      console.error('Error guardando cotización:', resp.status, errTxt);
+    }
+  } catch (err) {
+    if (avisoGuardado) {
+      avisoGuardado.style.display = 'block';
+      avisoGuardado.style.background = '#fff3cd';
+      avisoGuardado.style.color = '#856404';
+      avisoGuardado.textContent = '⚠️ Error de conexión al registrar. Puede igual enviar por WhatsApp o Email.';
+    }
+    console.error('Error de red guardando cotización:', err);
+  } finally {
+    if (btnPreparar) { btnPreparar.disabled = false; btnPreparar.textContent = guardadoOk ? '✅ Cotización preparada' : 'Preparar cotización'; }
+  }
 
   document.getElementById('btn-email-prov').onclick = () => {
     window.location.href = `mailto:${CORREO_JUNTA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
