@@ -140,8 +140,12 @@ export default function ImpactoRecibo() {
   };
 
   const borrarCompra = (c) => {
-    if (window.confirm(`¿Eliminar "${c.nombre}" del módulo de Compras?`))
+    if (!window.confirm(`¿Eliminar "${c.nombre}"? Esta acción no se puede deshacer.`)) return;
+    if (c.historial_id) {
+      accion(() => API.delete(`/recibo/historial-compra/${c.historial_id}`));
+    } else if (c.suministro_id) {
       accion(() => API.delete(`/suministros/${c.suministro_id}`));
+    }
   };
 
   const borrarExtra = (e) => {
@@ -295,7 +299,7 @@ export default function ImpactoRecibo() {
                     <td style={{ ...td, fontWeight: 600 }}>{c.convertido ? `+${usd(porVilla(c.monto_usd))}` : '—'}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{c.convertido && incluirCompras ? `${pctDe(c.monto_usd).toFixed(1)}%` : '—'}</td>
                     <td style={{ ...td, textAlign: 'right' }}>
-                      {c.suministro_id && <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarCompra(c)}>Eliminar</button>}
+                      {(c.suministro_id || c.historial_id) && <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarCompra(c)}>Eliminar</button>}
                     </td>
                   </tr>
                 ))}
