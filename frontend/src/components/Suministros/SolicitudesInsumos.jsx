@@ -690,15 +690,17 @@ export default function SolicitudesInsumos() {
                           <td style={{ ...tdS, color: '#666' }}>{it.alternativa || '—'}</td>
                           <td style={{ ...tdS, fontWeight: 600 }}>{fmt(it.precio_usd)}</td>
                           <td style={{ ...tdS, fontWeight: 700, color: '#1a7a3c' }}>{fmt(it.subtotal_usd)}</td>
-                          <td style={tdS} onClick={e => e.stopPropagation()}>
+                          <td style={tdS}>
                             {!enEdicion ? (
-                              <button onClick={() => iniciarEditDesc(it)}
+                              <button
+                                onClick={e => { e.stopPropagation(); iniciarEditDesc(it); }}
                                 title="Editar descripción"
                                 style={{ padding: '3px 8px', border: '1px solid #2a78d6', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#2a78d6' }}>
                                 ✏️
                               </button>
                             ) : (
-                              <button onClick={() => cancelarEditDesc(it.id)}
+                              <button
+                                onClick={e => { e.stopPropagation(); cancelarEditDesc(it.id); }}
                                 style={{ padding: '3px 8px', border: '1px solid #aaa', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#666' }}>
                                 ✕
                               </button>
@@ -712,7 +714,7 @@ export default function SolicitudesInsumos() {
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 8, alignItems: 'center' }}>
                                 <div>
                                   <div style={{ fontSize: 11, fontWeight: 700, color: '#2a78d6', marginBottom: 3 }}>PRODUCTO SOLICITADO</div>
-                                  <input value={vals.descripcion}
+                                  <input autoFocus value={vals.descripcion}
                                     onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], descripcion: e.target.value } }))}
                                     onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
                                     style={{ ...inp, padding: '6px 10px', fontSize: 13, fontWeight: 600, border: '1.5px solid #2a78d6' }} />
@@ -725,11 +727,11 @@ export default function SolicitudesInsumos() {
                                     placeholder="Producto ofrecido por proveedor"
                                     style={{ ...inp, padding: '6px 10px', fontSize: 13, border: '1.5px solid #2a78d6' }} />
                                 </div>
-                                <button onClick={() => guardarDesc(it.id)} disabled={guardando_}
+                                <button onClick={e => { e.stopPropagation(); guardarDesc(it.id); }} disabled={guardando_}
                                   style={{ padding: '8px 16px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', marginTop: 16 }}>
                                   {guardando_ ? '...' : '✔ Guardar'}
                                 </button>
-                                <button onClick={() => cancelarEditDesc(it.id)}
+                                <button onClick={e => { e.stopPropagation(); cancelarEditDesc(it.id); }}
                                   style={{ padding: '8px 12px', border: '1px solid #aaa', borderRadius: 7, background: '#fff', fontSize: 13, cursor: 'pointer', marginTop: 16 }}>
                                   ✕
                                 </button>
