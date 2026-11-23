@@ -139,6 +139,11 @@ export default function ImpactoRecibo() {
     });
   };
 
+  const borrarCompra = (c) => {
+    if (window.confirm(`¿Eliminar "${c.nombre}" del módulo de Compras?`))
+      accion(() => API.delete(`/suministros/${c.suministro_id}`));
+  };
+
   const borrarExtra = (e) => {
     if (window.confirm(`¿Eliminar "${e.concepto}"?`)) accion(() => API.delete(`/recibo/extras/${e.id}`));
   };
@@ -279,7 +284,7 @@ export default function ImpactoRecibo() {
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>{['Fecha', 'Suministro', 'Proveedor', 'Monto (USD)', 'Sube por villa', '% del recibo'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Fecha', 'Suministro', 'Proveedor', 'Monto (USD)', 'Sube por villa', '% del recibo', ''].map(h => <th key={h || 'acc'} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {data.compras.map((c, i) => (
                   <tr key={i}>
@@ -289,6 +294,9 @@ export default function ImpactoRecibo() {
                     <td style={td}>{c.convertido ? usd(c.monto_usd) : <span style={{ color: '#a15c00' }}>Sin convertir</span>}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{c.convertido ? `+${usd(porVilla(c.monto_usd))}` : '—'}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{c.convertido && incluirCompras ? `${pctDe(c.monto_usd).toFixed(1)}%` : '—'}</td>
+                    <td style={{ ...td, textAlign: 'right' }}>
+                      {c.suministro_id && <button style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }} onClick={() => borrarCompra(c)}>Eliminar</button>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
