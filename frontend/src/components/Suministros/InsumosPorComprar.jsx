@@ -29,6 +29,11 @@ export default function InsumosPorComprar() {
   const [guardando, setGuardando] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState(null);
   const [catalogo, setCatalogo] = useState([]);
+  const [seleccionados, setSeleccionados] = useState(new Set());
+  const [modalCotizacion, setModalCotizacion] = useState(false);
+  const [formCot, setFormCot] = useState({ nro_solicitud: '', obra: 'Condominio Náutico Pueblo Viejo II', fecha_requerida: '', observaciones: '' });
+  const [enviandoCot, setEnviandoCot] = useState(false);
+  const [avisoCot, setAvisoCot] = useState('');
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -103,6 +108,59 @@ export default function InsumosPorComprar() {
     !buscar || i.nombre.toLowerCase().includes(buscar.toLowerCase())
   );
 
+  const toggleSeleccion = (id) => {
+    setSeleccionados(prev => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  };
+
+  const toggleTodos = () => {
+    if (seleccionados.size === listaFiltrada.length) {
+      setSeleccionados(new Set());
+    } else {
+      setSeleccionados(new Set(listaFiltrada.map(i => i.id)));
+    }
+  };
+
+  const abrirModalCotizacion = () => {
+    const nro = `COT-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+    setFormCot({ nro_solicitud: nro, obra: 'Condominio Náutico Pueblo Viejo II', fecha_requerida: '', observaciones: '' });
+    setAvisoCot('');
+    setModalCotizacion(true);
+  };
+
+  const enviarCotizacion = async () => {
+    if (!formCot.nro_solicitud.trim() || !formCot.obra.trim()) {
+      setAvisoCot('Completa el número de solicitud y la obra.'); return;
+    }
+    setEnviandoCot(true);
+    try {
+      const itemsSeleccionados = listaFiltrada.filter(i => seleccionados.has(i.id));
+      await API.post('/pedidos-cotizacion/', {
+        nro_solicitud: formCot.nro_solicitud.trim().toUpperCase(),
+        obra: formCot.obra.trim().toUpperCase(),
+        fecha_requerida: formCot.fecha_requerida || null,
+        observaciones: formCot.observaciones ? formCot.observaciones.trim().toUpperCase() : null,
+        items: itemsSeleccionados.map(i => ({
+          descripcion: i.nombre,
+          cantidad: String(i.cantidad),
+          unidad: i.unidad || null,
+        })),
+      });
+      setModalCotizacion(false);
+      setSeleccionados(new Set());
+      setAvisoCot('');
+      alert(`Solicitud de cotización creada exitosamente.`);
+    } catch (e) {
+      const det = e.response?.data?.detail;
+      setAvisoCot(det || 'Error al crear la solicitud.');
+    } finally {
+      setEnviandoCot(false);
+    }
+  };
+
   const inp = { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
   const lbl = { display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 };
 
@@ -135,6 +193,21 @@ export default function InsumosPorComprar() {
           style={{ flex: 1, minWidth: 180, padding: '7px 12px', border: '1px solid #ddd', borderRadius: 20, fontSize: 13 }} />
       </div>
 
+      {/* Barra de cotización */}
+      {seleccionados.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#1b4f8f', color: '#fff', padding: '10px 16px', borderRadius: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{seleccionados.size} insumo(s) seleccionado(s)</span>
+          <button onClick={abrirModalCotizacion}
+            style={{ padding: '7px 18px', background: '#fff', color: '#1b4f8f', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            📋 Solicitar Cotización
+          </button>
+          <button onClick={() => setSeleccionados(new Set())}
+            style={{ padding: '7px 12px', background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 7, fontSize: 13, cursor: 'pointer' }}>
+            Limpiar
+          </button>
+        </div>
+      )}
+
       {/* Tabla */}
       {cargando ? (
         <p style={{ color: '#888', textAlign: 'center', padding: 40 }}>Cargando...</p>
@@ -147,6 +220,9 @@ export default function InsumosPorComprar() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr>
+                <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600, color: '#1a3a5c', borderBottom: '2px solid #c5d8f7', position: 'sticky', top: 0, background: '#e8f0fe', zIndex: 1, width: 40 }}>
+                  <input type="checkbox" checked={seleccionados.size === listaFiltrada.length && listaFiltrada.length > 0} onChange={toggleTodos} title="Seleccionar todos" />
+                </th>
                 {['Insumo / Material', 'Cantidad', 'Unidad', 'Nota', 'Estado', ''].map(h => (
                   <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#1a3a5c',
                     borderBottom: '2px solid #c5d8f7', whiteSpace: 'nowrap',
@@ -158,8 +234,11 @@ export default function InsumosPorComprar() {
               {listaFiltrada.map((item, i) => {
                 const ec = ESTADO_COLOR[item.estado] || {};
                 return (
-                  <tr key={item.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafbfd', borderBottom: '1px solid #eee',
+                  <tr key={item.id} style={{ background: seleccionados.has(item.id) ? '#eef5ff' : i % 2 === 0 ? '#fff' : '#fafbfd', borderBottom: '1px solid #eee',
                     opacity: item.estado === 'Comprado' || item.estado === 'Donado' ? 0.6 : 1 }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={seleccionados.has(item.id)} onChange={() => toggleSeleccion(item.id)} />
+                    </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: item.estado === 'Comprado' || item.estado === 'Donado' ? '#888' : '#1a1a1a',
                       textDecoration: item.estado === 'Comprado' || item.estado === 'Donado' ? 'line-through' : 'none' }}>
                       {item.nombre}
@@ -284,6 +363,53 @@ export default function InsumosPorComprar() {
               <button onClick={guardar} disabled={guardando}
                 style={{ padding: '9px 24px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: guardando ? 0.7 : 1 }}>
                 {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal solicitud de cotización */}
+      {modalCotizacion && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 500 }}>
+            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700 }}>Solicitar Cotización</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#777' }}>{seleccionados.size} insumo(s) seleccionado(s)</p>
+
+            {avisoCot && <p style={{ background: '#fdecec', color: '#c00', padding: '8px 12px', borderRadius: 7, fontSize: 13, marginBottom: 12 }}>{avisoCot}</p>}
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={lbl}>Nº de Solicitud *</label>
+              <input value={formCot.nro_solicitud} onChange={e => setFormCot(f => ({ ...f, nro_solicitud: e.target.value.toUpperCase() }))} style={inp} placeholder="Ej: COT-2026-001" />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={lbl}>Obra / Proyecto *</label>
+              <input value={formCot.obra} onChange={e => setFormCot(f => ({ ...f, obra: e.target.value.toUpperCase() }))} style={inp} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={lbl}>Fecha requerida (opcional)</label>
+              <input type="date" value={formCot.fecha_requerida} onChange={e => setFormCot(f => ({ ...f, fecha_requerida: e.target.value }))} style={inp} />
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={lbl}>Observaciones (opcional)</label>
+              <input value={formCot.observaciones} onChange={e => setFormCot(f => ({ ...f, observaciones: e.target.value.toUpperCase() }))} style={inp} placeholder="Ej: Urgente para mantenimiento de piscina" />
+            </div>
+
+            <div style={{ background: '#f7f9fc', borderRadius: 8, padding: 12, marginBottom: 18, maxHeight: 150, overflowY: 'auto' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 6 }}>INSUMOS INCLUIDOS:</div>
+              {listaFiltrada.filter(i => seleccionados.has(i.id)).map(i => (
+                <div key={i.id} style={{ fontSize: 13, color: '#333', padding: '2px 0' }}>• {i.nombre} — {i.cantidad} {i.unidad || ''}</div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalCotizacion(false)}
+                style={{ padding: '9px 20px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={enviarCotizacion} disabled={enviandoCot}
+                style={{ padding: '9px 22px', background: '#1b4f8f', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {enviandoCot ? 'Creando...' : 'Crear Solicitud'}
               </button>
             </div>
           </div>
