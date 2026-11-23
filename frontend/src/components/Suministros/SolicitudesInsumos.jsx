@@ -660,12 +660,12 @@ export default function SolicitudesInsumos() {
               {detalleCot.observaciones_prov && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#888' }}>Obs: </span>{detalleCot.observaciones_prov}</div>}
             </div>
 
-            <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}>Selecciona los ítems que vas a aprobar/comprar · <span style={{ color: '#2a78d6' }}>✏️ clic en el nombre para editar</span></p>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}>Selecciona los ítems que vas a aprobar/comprar · <span style={{ color: '#2a78d6' }}>✏️ para editar descripción</span></p>
             <div style={{ overflowX: 'auto', marginBottom: 20 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#f5f7fa' }}>
-                    {['✓', '#', 'Producto solicitado', 'Cant.', 'Unidad', 'Producto ofrecido', 'Precio/u USD', 'Subtotal USD'].map(h => (
+                    {['✓', '#', 'Producto solicitado', 'Cant.', 'Unidad', 'Producto ofrecido', 'Precio/u USD', 'Subtotal USD', ''].map(h => (
                       <th key={h} style={thS}>{h}</th>
                     ))}
                   </tr>
@@ -677,75 +677,72 @@ export default function SolicitudesInsumos() {
                     const vals = editDescCot[it.id] || {};
                     const guardando_ = !!guardandoDesc[it.id];
                     return (
-                      <tr key={it.id}
-                        style={{ background: sel ? '#edf7ee' : (i % 2 === 0 ? '#fff' : '#fafbfd'), borderBottom: '1px solid #eee' }}>
-                        <td style={tdS} onClick={() => toggleItem(it.id)} style={{ ...tdS, cursor: 'pointer' }}>
-                          <input type="checkbox" checked={sel} onChange={() => toggleItem(it.id)} onClick={e => e.stopPropagation()} style={{ width: 16, height: 16 }} />
-                        </td>
-                        <td style={{ ...tdS, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{i + 1}</td>
-
-                        {/* Producto solicitado — editable */}
-                        <td style={{ ...tdS, minWidth: 160 }}>
-                          {enEdicion ? (
-                            <input autoFocus value={vals.descripcion}
-                              onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], descripcion: e.target.value } }))}
-                              onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
-                              style={{ ...inp, padding: '4px 8px', fontSize: 13, fontWeight: 600, border: '2px solid #2a78d6' }} />
-                          ) : (
-                            <span onClick={() => iniciarEditDesc(it)}
-                              title="Clic para editar"
-                              style={{ fontWeight: 600, cursor: 'text', borderBottom: '1px dashed #bbb', paddingBottom: 1 }}>
-                              {it.descripcion || '—'}
-                            </span>
-                          )}
-                        </td>
-
-                        <td style={{ ...tdS, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{it.cantidad || '—'}</td>
-                        <td style={{ ...tdS, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{it.unidad || '—'}</td>
-
-                        {/* Producto ofrecido (alternativa) — editable */}
-                        <td style={{ ...tdS, minWidth: 140 }}>
-                          {enEdicion ? (
-                            <input value={vals.alternativa}
-                              onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], alternativa: e.target.value } }))}
-                              onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
-                              placeholder="Producto ofrecido"
-                              style={{ ...inp, padding: '4px 8px', fontSize: 13, border: '2px solid #2a78d6' }} />
-                          ) : (
-                            <span onClick={() => iniciarEditDesc(it)}
-                              title="Clic para editar"
-                              style={{ color: '#666', cursor: 'text', borderBottom: '1px dashed #bbb', paddingBottom: 1 }}>
-                              {it.alternativa || <span style={{ color: '#ccc' }}>—</span>}
-                            </span>
-                          )}
-                        </td>
-
-                        <td style={{ ...tdS, fontWeight: 600, cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{fmt(it.precio_usd)}</td>
-                        <td style={{ ...tdS, fontWeight: 700, color: '#1a7a3c', cursor: 'pointer' }} onClick={() => toggleItem(it.id)}>{fmt(it.subtotal_usd)}</td>
-                      </tr>
+                      <React.Fragment key={it.id}>
+                        <tr onClick={() => toggleItem(it.id)}
+                          style={{ background: sel ? '#edf7ee' : (i % 2 === 0 ? '#fff' : '#fafbfd'), borderBottom: enEdicion ? 'none' : '1px solid #eee', cursor: 'pointer' }}>
+                          <td style={{ ...tdS, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={sel} onChange={() => toggleItem(it.id)} onClick={e => e.stopPropagation()} style={{ width: 16, height: 16 }} />
+                          </td>
+                          <td style={tdS}>{i + 1}</td>
+                          <td style={{ ...tdS, fontWeight: 500 }}>{it.descripcion || '—'}</td>
+                          <td style={tdS}>{it.cantidad || '—'}</td>
+                          <td style={tdS}>{it.unidad || '—'}</td>
+                          <td style={{ ...tdS, color: '#666' }}>{it.alternativa || '—'}</td>
+                          <td style={{ ...tdS, fontWeight: 600 }}>{fmt(it.precio_usd)}</td>
+                          <td style={{ ...tdS, fontWeight: 700, color: '#1a7a3c' }}>{fmt(it.subtotal_usd)}</td>
+                          <td style={tdS} onClick={e => e.stopPropagation()}>
+                            {!enEdicion ? (
+                              <button onClick={() => iniciarEditDesc(it)}
+                                title="Editar descripción"
+                                style={{ padding: '3px 8px', border: '1px solid #2a78d6', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#2a78d6' }}>
+                                ✏️
+                              </button>
+                            ) : (
+                              <button onClick={() => cancelarEditDesc(it.id)}
+                                style={{ padding: '3px 8px', border: '1px solid #aaa', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#666' }}>
+                                ✕
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Fila de edición inline — aparece debajo del ítem */}
+                        {enEdicion && (
+                          <tr style={{ background: '#eef4ff', borderBottom: '2px solid #2a78d6' }}>
+                            <td colSpan={9} style={{ padding: '10px 14px' }} onClick={e => e.stopPropagation()}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 8, alignItems: 'center' }}>
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#2a78d6', marginBottom: 3 }}>PRODUCTO SOLICITADO</div>
+                                  <input value={vals.descripcion}
+                                    onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], descripcion: e.target.value } }))}
+                                    onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
+                                    style={{ ...inp, padding: '6px 10px', fontSize: 13, fontWeight: 600, border: '1.5px solid #2a78d6' }} />
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#2a78d6', marginBottom: 3 }}>PRODUCTO OFRECIDO</div>
+                                  <input value={vals.alternativa}
+                                    onChange={e => setEditDescCot(prev => ({ ...prev, [it.id]: { ...prev[it.id], alternativa: e.target.value } }))}
+                                    onKeyDown={e => { if (e.key === 'Enter') guardarDesc(it.id); if (e.key === 'Escape') cancelarEditDesc(it.id); }}
+                                    placeholder="Producto ofrecido por proveedor"
+                                    style={{ ...inp, padding: '6px 10px', fontSize: 13, border: '1.5px solid #2a78d6' }} />
+                                </div>
+                                <button onClick={() => guardarDesc(it.id)} disabled={guardando_}
+                                  style={{ padding: '8px 16px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', marginTop: 16 }}>
+                                  {guardando_ ? '...' : '✔ Guardar'}
+                                </button>
+                                <button onClick={() => cancelarEditDesc(it.id)}
+                                  style={{ padding: '8px 12px', border: '1px solid #aaa', borderRadius: 7, background: '#fff', fontSize: 13, cursor: 'pointer', marginTop: 16 }}>
+                                  ✕
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-
-            {/* Botones guardar/cancelar edición si hay algún ítem en edición */}
-            {Object.keys(editDescCot).length > 0 && (
-              <div style={{ background: '#e8f0fe', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
-                <span style={{ color: '#2a78d6', fontWeight: 600 }}>✏️ Editando descripción</span>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                  <button onClick={() => { const id = parseInt(Object.keys(editDescCot)[0]); guardarDesc(id); }}
-                    disabled={Object.values(guardandoDesc).some(Boolean)}
-                    style={{ padding: '6px 16px', background: '#2a78d6', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    {Object.values(guardandoDesc).some(Boolean) ? 'Guardando...' : '✔ Guardar'}
-                  </button>
-                  <button onClick={() => setEditDescCot({})}
-                    style={{ padding: '6px 14px', border: '1px solid #aaa', borderRadius: 6, background: '#fff', fontSize: 13, cursor: 'pointer' }}>
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div style={{ textAlign: 'right', background: '#1a3a5c', color: '#fff', borderRadius: 10, padding: '14px 20px', marginBottom: 20 }}>
               <div style={{ fontSize: 13, opacity: 0.8 }}>Subtotal USD</div>
