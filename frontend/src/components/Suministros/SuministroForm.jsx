@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import API from '../../api';
 import UnidadCombo from './UnidadCombo';
 import ProveedorForm from '../Proveedores/ProveedorForm';
@@ -192,7 +192,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
   };
 
   const guardar = async () => {
-    if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
+    if (!form.nombre.trim()) { setError('El producto es obligatorio'); return; }
     if (!form.categoria) { setError('Selecciona una categoría'); return; }
     if (form.unidad && !UNIDADES.includes(form.unidad) && !(suministro && suministro.unidad === form.unidad)) {
       setError('Elige una unidad de la lista');
@@ -302,7 +302,7 @@ export default function SuministroForm({ suministro, inicial, pedidoId, onClose 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
 
           <div style={{ gridColumn: '1 / -1' }}>
-            {campo('Nombre del suministro', 'nombre', 'text', true, { list: 'lista-suministros', autoComplete: 'off', placeholder: 'Escribe o elige uno ya creado' })}
+            {campo('Producto', 'nombre', 'text', true, { list: 'lista-suministros', autoComplete: 'off', placeholder: 'Escribe o elige uno ya creado' })}
             <datalist id="lista-suministros">
               {existentes.map(x => <option key={`s-${x.id}`} value={x.nombre} />)}
               {catalogo

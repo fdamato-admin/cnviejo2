@@ -86,7 +86,7 @@ export default function CatalogoInsumos() {
   };
 
   const guardar = async () => {
-    if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
+    if (!form.nombre.trim()) { setError('El producto es obligatorio'); return; }
     if (!form.categoria) { setError('La categoría es obligatoria'); return; }
     setGuardando(true); setError('');
     try {
@@ -234,7 +234,7 @@ export default function CatalogoInsumos() {
             )}
 
             <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Nombre *</label>
+              <label style={lbl}>Producto *</label>
               <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
                 style={inp} placeholder="Ej: CLORO GRANULADO" autoFocus />
             </div>
