@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.api import proveedores, trabajos, auth, suministros, respaldos
@@ -202,3 +202,24 @@ def _migrar_solicitudes_insumos_v3():
             con.execute(text("ALTER TABLE solicitudes_insumos ADD COLUMN cotizacion_adjunta_url VARCHAR(500)"))
 
 _migrar_solicitudes_insumos_v3()
+
+def _migrar_catalogo_insumos_v2():
+    from sqlalchemy import text
+    nuevas = {
+        "uni_bulto": "VARCHAR(100)",
+        "cantidad": "FLOAT",
+        "color": "VARCHAR(100)",
+        "concentracion": "VARCHAR(100)",
+        "ultimo_proveedor": "VARCHAR(150)",
+        "ultimo_precio_bs": "FLOAT",
+        "tasa_cambio": "FLOAT",
+    }
+    with engine.begin() as con:
+        cols = [r[1] for r in con.execute(text("PRAGMA table_info(catalogo_insumos)"))]
+        if not cols:
+            return
+        for c, tipo in nuevas.items():
+            if c not in cols:
+                con.execute(text(f"ALTER TABLE catalogo_insumos ADD COLUMN {c} {tipo}"))
+
+_migrar_catalogo_insumos_v2()
