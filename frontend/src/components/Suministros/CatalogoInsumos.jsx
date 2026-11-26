@@ -11,7 +11,10 @@ const CATEGORIAS = [
   'Informática y tecnología', 'Otro',
 ];
 
-const FORM_VACIO = { nombre: '', marca: '', categoria: '', unidad: '', proveedor_habitual_id: '', ultimo_precio: '', notas: '' };
+const FORM_VACIO = {
+  nombre: '', marca: '', categoria: '', unidad: '', uni_bulto: '',
+  cantidad: '', color: '', concentracion: '', notas: '',
+};
 
 export default function CatalogoInsumos() {
   const [lista, setLista] = useState([]);
@@ -24,13 +27,14 @@ export default function CatalogoInsumos() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [confirmEliminar, setConfirmEliminar] = useState(null);
-  const [proveedores, setProveedores] = useState([]);
+  const [tasa, setTasa] = useState(null);
   // Detección de duplicados
   const [duplicados, setDuplicados] = useState([]);
   const buscarDupTimer = useRef(null);
 
+  // Cargar tasa de cambio vigente
   useEffect(() => {
-    API.get('/proveedores/').then(({ data }) => setProveedores(data)).catch(() => {});
+    API.get('/configuracion/tasa').then(({ data }) => setTasa(data.tasa)).catch(() => {});
   }, []);
 
   const cargar = useCallback(async () => {
@@ -69,15 +73,15 @@ export default function CatalogoInsumos() {
 
   const abrirEditar = (item) => {
     setEditando(item);
-    // Buscar el ID del proveedor por nombre para pre-seleccionar
-    const prov = proveedores.find(p => p.nombre === item.proveedor_habitual || p.empresa === item.proveedor_habitual);
     setForm({
       nombre: item.nombre,
       marca: item.marca || '',
       categoria: item.categoria,
       unidad: item.unidad || '',
-      proveedor_habitual_id: prov ? String(prov.id) : '',
-      ultimo_precio: item.ultimo_precio ?? '',
+      uni_bulto: item.uni_bulto || '',
+      cantidad: item.cantidad ?? '',
+      color: item.color || '',
+      concentracion: item.concentracion || '',
       notas: item.notas || '',
     });
     setDuplicados([]);
@@ -90,14 +94,16 @@ export default function CatalogoInsumos() {
     if (!form.categoria) { setError('La categoría es obligatoria'); return; }
     setGuardando(true); setError('');
     try {
-      const provSel = proveedores.find(p => String(p.id) === form.proveedor_habitual_id);
       const payload = {
         nombre: form.nombre.trim(),
         marca: form.marca.trim() || null,
         categoria: form.categoria,
         unidad: form.unidad || null,
-        proveedor_habitual: provSel ? (provSel.empresa || provSel.nombre) : null,
-        ultimo_precio: form.ultimo_precio !== '' ? parseFloat(form.ultimo_precio) : null,
+        uni_bulto: form.uni_bulto.trim() || null,
+        cantidad: form.cantidad !== '' ? parseFloat(form.cantidad) : null,
+        color: form.color.trim() || null,
+        concentracion: form.concentracion.trim() || null,
+        proveedor_habitual: editando ? editando.proveedor_habitual : null,
         notas: form.notas.trim() || null,
       };
       if (editando) {
@@ -121,6 +127,7 @@ export default function CatalogoInsumos() {
   };
 
   const inp = { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
+  const inpRO = { ...inp, background: '#f5f5f5', color: '#555', cursor: 'default' };
   const lbl = { display: 'block', fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 4 };
 
   return (
@@ -165,7 +172,7 @@ export default function CatalogoInsumos() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr>
-                {['Código', 'Nombre', 'Marca', 'Categoría', 'Unidad', 'Proveedor habitual', 'Último precio', ''].map(h => (
+                {['Código', 'Nombre', 'Marca', 'Categoría', 'Unidad', 'Último proveedor', 'Último precio', ''].map(h => (
                   <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#1a3a5c',
                     borderBottom: '2px solid #c5d8f7', whiteSpace: 'nowrap',
                     position: 'sticky', top: 0, background: '#e8f0fe', zIndex: 1 }}>{h}</th>
@@ -188,9 +195,14 @@ export default function CatalogoInsumos() {
                     </span>
                   </td>
                   <td style={{ padding: '10px 14px', color: '#666' }}>{item.unidad || '—'}</td>
-                  <td style={{ padding: '10px 14px', color: '#666' }}>{item.proveedor_habitual || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#666' }}>{item.ultimo_proveedor || item.proveedor_habitual || '—'}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: item.ultimo_precio ? '#1a7a3c' : '#aaa' }}>
-                    {item.ultimo_precio ? `$${parseFloat(item.ultimo_precio).toFixed(2)}` : '—'}
+                    {item.ultimo_precio ? (
+                      <span>
+                        ${parseFloat(item.ultimo_precio).toFixed(2)}
+                        {item.ultimo_precio_bs && <span style={{ display: 'block', fontSize: 11, color: '#888', fontWeight: 400 }}>Bs {parseFloat(item.ultimo_precio_bs).toFixed(2)}</span>}
+                      </span>
+                    ) : '—'}
                   </td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -214,7 +226,7 @@ export default function CatalogoInsumos() {
       {/* Modal nuevo/editar */}
       {mostrarForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>
               {editando ? `Editar — ${editando.codigo}` : 'Nuevo insumo'}
             </h2>
@@ -233,16 +245,21 @@ export default function CatalogoInsumos() {
               </div>
             )}
 
+            {/* Producto */}
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>Producto *</label>
               <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
                 style={inp} placeholder="Ej: CLORO GRANULADO" autoFocus />
             </div>
+
+            {/* Marca */}
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>Marca</label>
               <input value={form.marca} onChange={e => setForm(f => ({ ...f, marca: e.target.value }))}
                 style={inp} placeholder="Ej: BIOPLUS, GENERICO" />
             </div>
+
+            {/* Categoría */}
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>Categoría *</label>
               <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={inp}>
@@ -250,6 +267,8 @@ export default function CatalogoInsumos() {
                 {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+
+            {/* Unidad + UNI/BULTO */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
               <div>
                 <label style={lbl}>Unidad</label>
@@ -257,21 +276,65 @@ export default function CatalogoInsumos() {
                   opciones={UNIDADES} estilo={inp} placeholder="Seleccionar unidad" />
               </div>
               <div>
-                <label style={lbl}>Último precio (USD)</label>
-                <input type="number" min="0" step="0.01" value={form.ultimo_precio}
-                  onChange={e => setForm(f => ({ ...f, ultimo_precio: e.target.value }))}
-                  style={inp} placeholder="0.00" />
+                <label style={lbl}>UNI/BULTO</label>
+                <input value={form.uni_bulto} onChange={e => setForm(f => ({ ...f, uni_bulto: e.target.value }))}
+                  style={inp} placeholder="Ej: 12 unid/caja" />
               </div>
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Proveedor habitual</label>
-              <select value={form.proveedor_habitual_id} onChange={e => setForm(f => ({ ...f, proveedor_habitual_id: e.target.value }))} style={inp}>
-                <option value="">— Sin proveedor —</option>
-                {proveedores.map(p => (
-                  <option key={p.id} value={p.id}>{p.empresa ? `${p.empresa} (${p.nombre})` : p.nombre}</option>
-                ))}
-              </select>
+
+            {/* Cantidad + Color */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div>
+                <label style={lbl}>Cantidad</label>
+                <input type="number" min="0" step="any" value={form.cantidad}
+                  onChange={e => setForm(f => ({ ...f, cantidad: e.target.value }))}
+                  style={inp} placeholder="0" />
+              </div>
+              <div>
+                <label style={lbl}>Color</label>
+                <input value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
+                  style={inp} placeholder="Ej: BLANCO, AZUL" />
+              </div>
             </div>
+
+            {/* Concentración */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={lbl}>Concentración</label>
+              <input value={form.concentracion} onChange={e => setForm(f => ({ ...f, concentracion: e.target.value }))}
+                style={inp} placeholder="Ej: 90%, 1 kg/L" />
+            </div>
+
+            {/* Último proveedor (read-only) */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={lbl}>Último proveedor</label>
+              <input readOnly
+                value={editando ? (editando.ultimo_proveedor || editando.proveedor_habitual || '—') : '—'}
+                style={inpRO} />
+            </div>
+
+            {/* Último precio USD + Bs (read-only) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div>
+                <label style={lbl}>Último precio (USD)</label>
+                <input readOnly
+                  value={editando && editando.ultimo_precio ? `$${parseFloat(editando.ultimo_precio).toFixed(2)}` : '—'}
+                  style={inpRO} />
+              </div>
+              <div>
+                <label style={lbl}>Último precio (Bs)</label>
+                <input readOnly
+                  value={
+                    editando && editando.ultimo_precio_bs
+                      ? `Bs ${parseFloat(editando.ultimo_precio_bs).toFixed(2)}`
+                      : (editando && editando.ultimo_precio && tasa)
+                        ? `Bs ${(parseFloat(editando.ultimo_precio) * tasa).toFixed(2)}`
+                        : '—'
+                  }
+                  style={inpRO} />
+              </div>
+            </div>
+
+            {/* Notas */}
             <div style={{ marginBottom: 16 }}>
               <label style={lbl}>Notas</label>
               <input value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}

@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -278,8 +278,15 @@ class CatalogoInsumo(Base):
     marca = Column(String(100), nullable=True)
     categoria = Column(String(100), nullable=False)
     unidad = Column(String(50), nullable=True)
+    uni_bulto = Column(String(100), nullable=True)
+    cantidad = Column(Float, nullable=True)
+    color = Column(String(100), nullable=True)
+    concentracion = Column(String(100), nullable=True)
     proveedor_habitual = Column(String(150), nullable=True)
+    ultimo_proveedor = Column(String(150), nullable=True)
     ultimo_precio = Column(Float, nullable=True)
+    ultimo_precio_bs = Column(Float, nullable=True)
+    tasa_cambio = Column(Float, nullable=True)
     ultima_fecha_compra = Column(String(20), nullable=True)
     notas = Column(Text, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
